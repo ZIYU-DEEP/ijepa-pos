@@ -107,7 +107,6 @@ class MaskCollator(object):
         mask_complement = torch.ones((self.height, self.width), dtype=torch.int32)
         mask_complement[top:top+h, left:left+w] = 0
         # --
-        #print("successful mask")
         return mask, mask_complement
 
     def __call__(self, batch):
