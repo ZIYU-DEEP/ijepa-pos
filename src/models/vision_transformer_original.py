@@ -360,10 +360,6 @@ class VisionTransformer(nn.Module):
         num_patches = self.patch_embed.num_patches
         # --
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim), requires_grad=False)
-        
-        # $$$$ Add the mask_pos_token
-        self.mask_pos_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
-
         pos_embed = get_2d_sincos_pos_embed(self.pos_embed.shape[-1],
                                             int(self.patch_embed.num_patches**.5),
                                             cls_token=False)
@@ -388,9 +384,6 @@ class VisionTransformer(nn.Module):
         for layer_id, layer in enumerate(self.blocks):
             rescale(layer.attn.proj.weight.data, layer_id + 1)
             rescale(layer.mlp.fc2.weight.data, layer_id + 1)
-        
-        # $$$$ Also initialize the mask_pos_token
-        torch.nn.init.normal_(self.mask_pos_token, std=.02)
 
     def _init_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -404,42 +397,6 @@ class VisionTransformer(nn.Module):
             trunc_normal_(m.weight, std=self.init_std)
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-
-    def apply_pos_drop_mask(x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
-        B, N, D = x.shape
-        device = x.device
-
-        # Determine the number of positions to drop in the masked area
-        num_pos_to_drop = int(mask.size(1) * pos_drop_ratio)
-
-        # Shuffle mask along the last dimension
-        random_tensor = torch.rand(B, mask.size(1))
-        shuffled_indices = random_tensor.argsort(dim=1)
-        shuffled_mask = mask.gather(1, shuffled_indices)
-
-        # Split the mask into two: one for keeping pos_embed, one for mask_pos_token
-        mask_no_pos = shuffled_mask[:, :num_pos_to_drop]
-        mask_keep_pos = shuffled_mask[:, num_pos_to_drop:]
-
-        # Apply the masks to x
-        x_no_pos = apply_masks(x, [mask_no_pos])
-        x_keep_pos = apply_masks(x, [mask_keep_pos])
-
-        # Apply pos_embed and mask_pos_token accordingly
-        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1)
-        x_no_pos = x_no_pos + mask_pos_tokens
-
-        pos_embed = pos_embed.repeat(B, 1, 1)
-        pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
-        x_keep_pos = x_keep_pos + pos_embed_masked
-
-        # Concatenate the results and shuffle again to restore the original order
-        x = torch.cat([x_no_pos, x_keep_pos], dim=1)
-        restored_indices = torch.argsort(shuffled_indices, dim=1)
-        x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
-
-        return x
-
 
     def forward(self, x, masks=None):
         if masks is not None:

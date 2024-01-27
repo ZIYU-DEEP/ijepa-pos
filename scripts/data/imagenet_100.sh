@@ -1,12 +1,10 @@
-# from_folder="${1}"  # e.g., /cat/data/imagenet_1k/
-# to_folder="${2}"  # e.g., /cat/data/imagenet_100/
+from_folder="${1}"  # e.g., /cat/data/imagenet_1k/
+to_folder="${2}"  # e.g., /cat/data/imagenet_100/
 
-from_folder=/localscratch/hsun409/data/imagenet_1k/
-to_folder=/localscratch/hsun409/data/imagenet_100/
 
-# mkdir ${to_folder}
-# mkdir ${to_folder}train
-# mkdir ${to_folder}val
+mkdir ${to_folder}
+mkdir ${to_folder}train
+mkdir ${to_folder}val
 
 cp -r ${from_folder}train/n02869837 ${to_folder}train/
 cp -r ${from_folder}train/n01749939 ${to_folder}train/
