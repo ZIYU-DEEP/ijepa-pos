@@ -334,7 +334,7 @@ class VisionTransformer(nn.Module):
         num_pos_to_drop = int(mask.size(1) * pos_drop_ratio)
 
         # Shuffle mask along the last dimension
-        random_tensor = torch.rand(B, mask.size(1))
+        random_tensor = torch.rand(B, mask.size(1), device=device)
         shuffled_indices = random_tensor.argsort(dim=1)
         shuffled_mask = mask.gather(1, shuffled_indices)
 
@@ -347,10 +347,10 @@ class VisionTransformer(nn.Module):
         x_keep_pos = apply_masks(x, [mask_keep_pos])
 
         # Apply pos_embed and mask_pos_token accordingly
-        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1)
+        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1).to(device)
         x_no_pos = x_no_pos + mask_pos_tokens
 
-        pos_embed = pos_embed.repeat(B, 1, 1)
+        pos_embed = pos_embed.repeat(B, 1, 1).to(device)
         pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
         x_keep_pos = x_keep_pos + pos_embed_masked
 
@@ -361,7 +361,7 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward_decoder(x):
+    def forward_decoder(self, x):
 
         x = self.decoder_embed(x)
         for blk in self.decoder_blocks:
@@ -371,7 +371,7 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward(self, x, masks=None, pos_drop_ratio=0):
+    def forward(self, x, masks=None, pos_drop_ratio=0, use_decoder=False):
         if masks is not None:
             if not isinstance(masks, list):
                 masks = [masks]
@@ -398,6 +398,9 @@ class VisionTransformer(nn.Module):
 
         if self.norm is not None:
             x = self.norm(x)
+
+        if use_decoder:
+            x = self.forward_decoder(x)
 
         return x
 
