@@ -231,6 +231,9 @@ class VisionTransformer(nn.Module):
         drop_path_rate=0.0,
         norm_layer=nn.LayerNorm,
         init_std=0.02,
+        decoder_embed_dim=256,
+        decoder_num_heads=2,
+        decoder_depth=2,
         **kwargs
     ):
         super().__init__()
@@ -273,6 +276,23 @@ class VisionTransformer(nn.Module):
         # ---------------------------------------------------------------------- #
         # Mask token settings
         self.mask_pos_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
+        # ----------------------------------------------------------------------
+
+        # ---------------------------------------------------------------------- #
+        # Decoder settings (a light weight decoder just for position prediction)
+        # Require additional parameters:
+        # - decoder_emebed_dim
+        # - decoder_num_heads
+        # - decoder_depth
+        self.decoder_embed_dim = decoder_embed_dim
+        self.decoder_embed = nn.Linear(embed_dim, decoder_embed_dim, bias=True)
+        self.decoder_blocks = nn.ModuleList([
+            Block(dim=decoder_embed_dim, num_heads=decoder_num_heads,
+                  mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
+                  drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
+            for i in range(decoder_depth)])
+        self.decoder_norm = norm_layer(decoder_embed_dim)
+        self.decoder_pred = nn.Linear(decoder_embed_dim, num_patches, bias=True)
         # ----------------------------------------------------------------------
 
         # ---------------------------------------------------------------------- #
@@ -338,6 +358,16 @@ class VisionTransformer(nn.Module):
         x = torch.cat([x_no_pos, x_keep_pos], dim=1)
         restored_indices = torch.argsort(shuffled_indices, dim=1)
         x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
+
+        return x
+
+    def forward_decoder(x):
+
+        x = self.decoder_embed(x)
+        for blk in self.decoder_blocks:
+            x = blk(x)
+        x = self.decoder_norm(x)
+        x = self.decoder_pred(x)  # from embed_dim to num_patches
 
         return x
 
