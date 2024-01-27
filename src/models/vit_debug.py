@@ -359,7 +359,7 @@ class VisionTransformer(nn.Module):
         restored_indices = torch.argsort(shuffled_indices, dim=1)
         x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
 
-        return x, mask_no_pos, mask_keep_pos
+        return x
 
     def forward_decoder(self, x):
 
@@ -400,8 +400,7 @@ class VisionTransformer(nn.Module):
             x = self.norm(x)
 
         if use_decoder:
-            x, mask_no_pos, mask_keep_pos = self.forward_decoder(x)
-            return x, mask_no_pos, mask_keep_pos
+            x = self.forward_decoder(x)
 
         return x
 
