@@ -359,7 +359,61 @@ class VisionTransformer(nn.Module):
         restored_indices = torch.argsort(shuffled_indices, dim=1)
         x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
 
-        return x, mask_no_pos, mask_keep_pos
+        return x
+
+    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
+        B, _, D = x.shape  # Original shape of x
+        device = x.device
+        x_initial = x.clone()  # Save the original x for later use
+
+
+        # Determine the number of positions to drop in the masked area
+        N_m = mask.size(1)  # Number of patches to keep after the mask is applied
+        num_pos_to_drop = int(N_m * pos_drop_ratio)
+
+        # Shuffle mask along the last dimension
+        random_tensor = torch.rand(B, N_m, device=device)
+        shuffled_indices = random_tensor.argsort(dim=1)
+        shuffled_mask = mask.gather(1, shuffled_indices)
+
+        # Split the mask into two: one for keeping pos_embed, one for mask_pos_token
+        mask_no_pos = shuffled_mask[:, :num_pos_to_drop]
+        mask_keep_pos = shuffled_mask[:, num_pos_to_drop:]
+
+        # Apply the masks to x
+        x_no_pos = apply_masks(x, [mask_no_pos])
+        x_keep_pos = apply_masks(x, [mask_keep_pos])
+
+        # Apply pos_embed and mask_pos_token accordingly
+        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1).to(device)
+        # x_no_pos = x_no_pos + mask_pos_tokens
+
+        pos_embed = pos_embed.repeat(B, 1, 1).to(device)
+        pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
+        # x_keep_pos = x_keep_pos + pos_embed_masked
+
+        # Concatenate the results and shuffle again to restore the original order
+        x = torch.cat([x_no_pos, x_keep_pos], dim=1)
+        restored_indices = torch.argsort(shuffled_indices, dim=1)
+        x_restored = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
+
+        # # Create a mask to identify positions with dropped positional embeddings
+        # pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)  # Adjust mask size to [B, N_m]
+        # drop_indices_restored = restored_indices[:, :num_pos_to_drop]
+
+        # # Use advanced indexing to set the dropped positions to True
+        # batch_indices = torch.arange(B, device=device).view(-1, 1)
+        # pos_drop_mask[batch_indices, drop_indices_restored] = True
+
+        # Create a boolean mask in the shuffled order
+        shuffled_pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)
+        shuffled_pos_drop_mask[:, :num_pos_to_drop] = True  # Mark the first num_pos_to_drop as True
+
+        # Restore the order of the boolean mask to match x_restored
+        pos_drop_mask = shuffled_pos_drop_mask.gather(1, restored_indices)
+
+
+        return x_no_pos, x_restored, pos_drop_mask, x_initial, mask_no_pos
 
 
     def forward_decoder(self, x):
@@ -387,12 +441,14 @@ class VisionTransformer(nn.Module):
         if not pos_drop_ratio:
             x += pos_embed
             if masks is not None: x = apply_masks(x, masks)
-            mask_no_pos, mask_keep_pos = None, None
+            mask_test = None, None
 
         else:
             assert len(masks) == 1, 'Only one mask is needed for the context.'
-            x, mask_no_pos, mask_keep_pos = self.apply_pos_drop_mask(
+            x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos = self.apply_pos_drop_mask(
                 x, pos_embed, self.mask_pos_token, masks[0], pos_drop_ratio)
+
+            return x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos
 
         # -- fwd prop
         for i, blk in enumerate(self.blocks):
@@ -404,7 +460,7 @@ class VisionTransformer(nn.Module):
         if use_decoder:
             x = self.forward_decoder(x)
             x = self.decoder_pred(x)  # from embed_dim to num_patches
-            return x, mask_no_pos, mask_keep_pos
+            return x, pos_drop_mask
 
         return x
 
