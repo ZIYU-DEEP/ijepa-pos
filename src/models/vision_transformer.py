@@ -357,9 +357,9 @@ class VisionTransformer(nn.Module):
         drop_path_rate=0.0,
         norm_layer=nn.LayerNorm,
         init_std=0.02,
-        decoder_embed_dim=256,
-        decoder_num_heads=2,
-        decoder_depth=2,
+        decoder_embed_dim=256,   # new for pos
+        decoder_num_heads=2,     # new for pos
+        decoder_depth=2,         # new for pos
         **kwargs
     ):
         super().__init__()

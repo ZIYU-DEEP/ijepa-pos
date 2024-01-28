@@ -1,10 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-#
-# This source code is licensed under the license found in the
-# LICENSE file in the root directory of this source tree.
-#
-
 import logging
 import sys
 
@@ -71,11 +64,18 @@ def init_model(
     model_name='vit_base',
     crop_size=224,
     pred_depth=6,
-    pred_emb_dim=384
+    pred_emb_dim=384,
+    decoder_embed_dim=256,   # new for pos
+    decoder_num_heads=2,     # new for pos
+    decoder_depth=2,         # new for pos
 ):
     encoder = vit.__dict__[model_name](
         img_size=[crop_size],
-        patch_size=patch_size)
+        patch_size=patch_size,
+        decoder_embed_dim=decoder_embed_dim,
+        decoder_num_heads=decoder_num_heads,
+        decoder_depth=decoder_depth)
+
     predictor = vit.__dict__['vit_predictor'](
         num_patches=encoder.patch_embed.num_patches,
         embed_dim=encoder.embed_dim,
