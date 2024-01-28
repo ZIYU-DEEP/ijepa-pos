@@ -408,6 +408,8 @@ class VisionTransformer(nn.Module):
         # x_ = x[pos_drop_bool.unsqueeze(-1).expand(-1, -1, D)].reshape(B, -1, D)
         # Differently, mask_no_pos contains the original indices (no. of the patch)
         # and will be used as labels
+
+        # Notice that the labels are sorted as the original order
         pos_labels = torch.sort(mask_no_pos.detach(), dim=1).values
 
         return x, pos_bool, pos_labels
@@ -441,6 +443,8 @@ class VisionTransformer(nn.Module):
 
             if masks is not None:
                 x = apply_masks(x, masks)
+
+            pos_bool, pos_labels = None, None
 
         else:
             assert len(masks) == 1, 'Only one mask is needed for the context.'
