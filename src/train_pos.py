@@ -21,7 +21,7 @@ import copy
 import logging
 import sys
 import yaml
-
+import wandb
 import numpy as np
 
 import torch
@@ -52,8 +52,8 @@ from src.transforms import make_transforms
 
 # --
 log_timings = True
-log_freq = 20
-checkpoint_freq = 50
+log_freq = 20  # the iteration
+checkpoint_freq = 5  # the epoch
 # --
 
 _GLOBAL_SEED = 0
@@ -99,6 +99,7 @@ def main(args, port=40112, resume_preempt=False):
     crop_size = args['data']['crop_size']
     crop_scale = args['data']['crop_scale']
     # --
+    loader_name = args['data']['loader_name']
 
     # -- MASK
     allow_overlap = args['mask']['allow_overlap']  # whether to allow overlap b/w context and target blocks
@@ -167,13 +168,27 @@ def main(args, port=40112, resume_preempt=False):
     folder = folder / tag
     os.makedirs(folder, exist_ok=True)
 
+    log_path = folder / f'pretrain.log'
     log_file = folder / f'r{rank}.csv'
     save_path = folder / 'ep{epoch}.pth.tar'
     latest_path = folder / f'latest.pth.tar'
 
-    # log_file = os.path.join(folder, f'{tag}_r{rank}.csv')
-    # save_path = os.path.join(folder, f'{tag}' + '-ep{epoch}.pth.tar')
-    # latest_path = os.path.join(folder, f'{tag}-latest.pth.tar')
+    # Set up the log saving
+    if rank == 0:
+        file_handler = logging.FileHandler(log_path)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+    
+    # Set up the wandb
+    if rank == 0:
+        wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}'
+        if use_pos_predictor: wandb_name += f'_{pos_drop_ratio}_{pos_lambda}'
+        wandb.init(entity='info-ssl',
+                   project=f'pos-ijepa-{loader_name}',
+                   name=wandb_name,
+                   config=args)
+
+    logger.info(folder)
 
     load_path = None
     if load_model:
@@ -301,7 +316,8 @@ def main(args, port=40112, resume_preempt=False):
         if rank == 0:
             torch.save(save_dict, latest_path)
             if (epoch + 1) % checkpoint_freq == 0:
-                torch.save(save_dict, save_path.format(epoch=f'{epoch + 1}'))
+                torch.save(save_dict, str(save_path).format(epoch=f'{epoch + 1}'))
+                logger.info(f'Model saved at {save_path}.')
 
     # -- TRAINING LOOP
     for epoch in range(start_epoch, num_epochs):
@@ -454,7 +470,6 @@ def main(args, port=40112, resume_preempt=False):
             # --------------------------------------------------------------- #
             # Probing for this iteration
             def probe_step():
-
                 with torch.no_grad():
                     features = encoder(imgs)
                     probe_logits = prober(features)
@@ -472,6 +487,8 @@ def main(args, port=40112, resume_preempt=False):
             def log_stats():
                 csv_logger.log(epoch + 1, itr, loss, maskA_meter.val, maskB_meter.val, etime)
                 if (itr % log_freq == 0) or np.isnan(loss) or np.isinf(loss):
+
+                    # Log to local
                     logger.info('[%d, %5d] [loss: %.3f] '
                                 '[ijepa loss: %.3f] '
                                 '[pos loss: %.3f] '
@@ -491,6 +508,13 @@ def main(args, port=40112, resume_preempt=False):
                                    _new_lr,
                                    torch.cuda.max_memory_allocated() / 1024.**2,
                                    time_meter.avg))
+                    # Log to wandb
+                    if rank == 0:
+                        wandb.log({'loss': loss_meter.avg,
+                                   'ijepa loss': ijepa_loss_meter.avg,
+                                   'pos loss': pos_loss_meter.avg,
+                                   'probe acc': probe_acc_meter.avg,
+                                  })
 
                     if grad_stats is not None:
                         logger.info('[%d, %5d] grad_stats: [%.2e %.2e] (%.2e, %.2e)'
@@ -499,7 +523,6 @@ def main(args, port=40112, resume_preempt=False):
                                        grad_stats.last_layer,
                                        grad_stats.min,
                                        grad_stats.max))
-
 
             log_stats()
 
@@ -512,6 +535,19 @@ def main(args, port=40112, resume_preempt=False):
         logger.info(f'avg. pos loss {pos_loss_meter.avg:.3f}')
         logger.info(f'avg. probe acc {probe_acc_meter.avg:.3f}')
         save_checkpoint(epoch + 1)
+
+        # For wandb 
+        if rank == 0:
+            wandb.log({'avg. loss': loss_meter.avg,
+                       'avg. ijepa loss': ijepa_loss_meter.avg,
+                       'avg. pos loss': pos_loss_meter.avg,
+                       'avg. probe acc': probe_acc_meter.avg,
+                        })
+        
+    
+    # End the wandb
+    if rank == 0:
+        wandb.finish()
 
 
 if __name__ == "__main__":

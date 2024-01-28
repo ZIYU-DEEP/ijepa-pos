@@ -6,6 +6,7 @@ data:
     - 1.0
     crop_size: 224
     image_folder: data/imagenet_100/
+    loader_name: imagenet_100  # This is just to set the log folder
     num_workers: 10
     pin_mem: true
     root_path: /localscratch/hsun409/
