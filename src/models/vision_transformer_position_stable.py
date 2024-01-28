@@ -5,6 +5,7 @@ Notes on the edits:
 """
 
 from src.masks.utils import apply_masks
+from typing import List, Tuple
 from functools import partial
 from src.utils.tensors import (
     trunc_normal_,
@@ -17,7 +18,7 @@ import math
 import torch
 
 
-def get_2d_sincos_pos_embed(embed_dim, gvisirid_size, cls_token=False):
+def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
     """
     grid_size: int of the grid height and width
     return:
@@ -324,6 +325,17 @@ class VisionTransformerPredictor(nn.Module):
         return x
 
 
+class FeatAvgPool(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool1d(1)
+
+    def forward(self, x):
+        # bs, seq_len, dims = x.shape
+        x = x.permute((0, 2, 1))
+        return self.avg_pool(x).squeeze()
+
+
 class VisionTransformer(nn.Module):
     """ Vision Transformer """
     def __init__(
@@ -366,6 +378,7 @@ class VisionTransformer(nn.Module):
                   attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
             for i in range(depth)])
         self.norm = norm_layer(embed_dim)
+        self.avg_pool = FeatAvgPool()
         # ----------------------------------------------------------------------
 
         # ---------------------------------------------------------------------- #
@@ -439,9 +452,26 @@ class VisionTransformer(nn.Module):
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
-    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
-        # This function will be used in the forward part
+    def interpolate_pos_encoding(self, x, pos_embed):
+        npatch = x.shape[1] - 1
+        N = pos_embed.shape[1] - 1
+        if npatch == N:
+            return pos_embed
+        class_emb = pos_embed[:, 0]
+        pos_embed = pos_embed[:, 1:]
+        dim = x.shape[-1]
+        pos_embed = nn.functional.interpolate(
+            pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
+            scale_factor=math.sqrt(npatch / N),
+            mode='bicubic',
+        )
+        pos_embed = pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
+        return torch.cat((class_emb.unsqueeze(0), pos_embed), dim=1)
 
+    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
+        """
+        Helper functions to be used in the forward part to drop positions.
+        """
         # ---------------------------------------------------------- #
         # Preparation
         B, _, D = x.shape  # Original shape of x
@@ -508,8 +538,11 @@ class VisionTransformer(nn.Module):
 
         return x, pos_bool, pos_labels
 
-
     def forward_decoder(self, x):
+        """
+        This will be used at the forward part to
+        get the logits for positions.
+        """
 
         x = self.decoder_embed(x)
         for blk in self.decoder_blocks:
@@ -519,7 +552,11 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward(self, x, masks=None, pos_drop_ratio=0, use_pos_predictor=False):
+    def forward(self, x,
+                masks=None,
+                pos_drop_ratio: float=0,
+                use_pos_predictor: bool=False,
+                out_feat_keys: List[str]=None):
         """
         masks: a list of masks; for context there should only be one mask.
             each mask has shape (batch_size, no. patches to keep)
@@ -529,6 +566,12 @@ class VisionTransformer(nn.Module):
         user_decoder: we apply a lightweight decoder for position prediction.
             if we use decoder, we return additional pos_logits, pos_bool, pos_labels
         """
+        # ---------------------------------------------------------- #
+        # Get features for the evaluation; see methods at the end
+        if out_feat_keys:
+            x = self.get_intermediate_features(x, masks, out_feat_keys)
+            return x
+        # ----------------------------------------------------------
 
         # ---------------------------------------------------------- #
         # Handle the mask
@@ -596,21 +639,80 @@ class VisionTransformer(nn.Module):
             return x
         # ----------------------------------------------------------
 
-    def interpolate_pos_encoding(self, x, pos_embed):
-        npatch = x.shape[1] - 1
-        N = pos_embed.shape[1] - 1
-        if npatch == N:
-            return pos_embed
-        class_emb = pos_embed[:, 0]
-        pos_embed = pos_embed[:, 1:]
-        dim = x.shape[-1]
-        pos_embed = nn.functional.interpolate(
-            pos_embed.reshape(1, int(math.sqrt(N)), int(math.sqrt(N)), dim).permute(0, 3, 1, 2),
-            scale_factor=math.sqrt(npatch / N),
-            mode='bicubic',
-        )
-        pos_embed = pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
-        return torch.cat((class_emb.unsqueeze(0), pos_embed), dim=1)
+    # ======================================================================= #
+    # Helper functions to get features (will be called with no_grad for eval)
+    def prepare_tokens(self, x: torch.Tensor, masks=None) -> torch.Tensor:
+
+        # ---------------------------------------------------------- #
+        # We shouldn't use mask for eval, but let's just keep it here
+        if masks is not None:
+            if not isinstance(masks, list):
+                masks = [masks]
+        # ----------------------------------------------------------
+
+        # ---------------------------------------------------------- #
+        # Patchify x
+        x = self.patch_embed(x)
+        B, N, D = x.shape
+        # ----------------------------------------------------------
+
+        # ---------------------------------------------------------- #
+        # Get the positional embeddings for each patch
+        pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
+
+        # In evaluation we will always add the pos_emb
+        x = x + pos_embed
+
+        # We shouldn't use mask for eval, but let's just keep it here
+        if masks is not None:
+            x = apply_masks(x, masks)
+        # ----------------------------------------------------------
+
+        return x
+
+    def get_intermediate_features(self, x, masks=None,
+            names: List[str]=None) -> List[torch.Tensor]:
+        """
+        Given a list of feature names, return a list of the same length
+        where each output correspond to the desired feature.
+
+        To align with ijepa, the available features are:
+        - lastpool
+        - concatpool4
+        """
+
+        # Prepare tokens (patchify and add positional encoding)
+        x = self.prepare_tokens(x, masks)
+
+        # Determine the number of layers to keep based on requested features
+        keep_last_n = 1 if 'lastpool' in names else 0
+        if any(name.startswith('concatpool') for name in names):
+            keep_last_n = max(keep_last_n, 4)  # Keep last 4 for concatPOOL4
+
+        # Buffer to store outputs of the required last N layers
+        interms_buffer = collections.deque(maxlen=keep_last_n)
+
+        # Forward propagation
+        for i, blk in enumerate(self.blocks):
+            x = blk(x)
+
+            # Append to buffer if in the last N layers
+            if i >= len(self.blocks) - keep_last_n:
+                interms_buffer.append(x)
+
+        if self.norm is not None:
+            x = self.norm(x)
+            interms_buffer[-1] = x
+
+        output = []
+        for name in names:
+            if name == 'lastpool':
+                output.append(self.avg_pool(interms_buffer[-1]))
+            elif name.startswith('concatpool'):
+                concat_features = torch.cat([self.avg_pool(layer) for layer in interms_buffer], dim=-1)
+                output.append(concat_features)
+
+        return output
 
 
 def vit_predictor(**kwargs):

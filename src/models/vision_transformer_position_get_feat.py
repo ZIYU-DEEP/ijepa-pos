@@ -17,7 +17,7 @@ import math
 import torch
 
 
-def get_2d_sincos_pos_embed(embed_dim, gvisirid_size, cls_token=False):
+def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
     """
     grid_size: int of the grid height and width
     return:
