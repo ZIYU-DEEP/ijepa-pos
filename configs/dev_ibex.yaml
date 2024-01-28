@@ -36,12 +36,12 @@ mask:
 
 meta:
     copy_data: false
-    load_checkpoint: true
+    load_checkpoint: false
     model_name: vit_small
     pred_depth: 6
     pred_emb_dim: 192
     read_checkpoint: null
-    use_bfloat16: true
+    use_bfloat16: false
 
 optimization:
     ema:
@@ -57,6 +57,7 @@ optimization:
     weight_decay: 0.04
 
 probe:
+    use_prober: true
     out_feat_keys: lastpool
     n_categories: 100
     probe_interval: 1

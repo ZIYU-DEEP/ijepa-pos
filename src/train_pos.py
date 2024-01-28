@@ -17,6 +17,7 @@ try:
 except Exception:
     pass
 
+import random
 import copy
 import logging
 import sys
@@ -57,6 +58,7 @@ checkpoint_freq = 5  # the epoch
 # --
 
 _GLOBAL_SEED = 0
+random.seed(_GLOBAL_SEED)
 np.random.seed(_GLOBAL_SEED)
 torch.manual_seed(_GLOBAL_SEED)
 torch.backends.cudnn.benchmark = True
@@ -128,6 +130,7 @@ def main(args, port=40112, resume_preempt=False):
     tag = args['logging']['write_tag']
 
     # -- PROBE $$$$$$$$$
+    use_prober = args['probe']['use_prober']
     out_feat_keys = args['probe']['out_feat_keys']
     n_categories = args['probe']['n_categories']
     probe_interval = args['probe']['probe_interval']
@@ -214,11 +217,12 @@ def main(args, port=40112, resume_preempt=False):
         model_name=model_name,
         decoder_embed_dim=decoder_embed_dim,
         decoder_num_heads=decoder_num_heads,
-        decoder_depth=decoder_depth)
+        decoder_depth=decoder_depth,
+        n_categories=n_categories)
     target_encoder = copy.deepcopy(encoder)
 
-    # -- set the linear prober
-    prober = torch.nn.Linear(encoder.embed_dim, n_categories).to(device)
+    # # -- set the linear prober
+    # prober = torch.nn.Linear(encoder.embed_dim, n_categories).to(device)
 
     # -- make data transforms
     mask_collator = MBMaskCollator(
@@ -274,7 +278,7 @@ def main(args, port=40112, resume_preempt=False):
     encoder = DistributedDataParallel(encoder, static_graph=True)
     predictor = DistributedDataParallel(predictor, static_graph=True)
     target_encoder = DistributedDataParallel(target_encoder)
-    prober = DistributedDataParallel(prober)
+    # prober = DistributedDataParallel(prober)
 
     for p in target_encoder.parameters():
         p.requires_grad = False
@@ -332,6 +336,7 @@ def main(args, port=40112, resume_preempt=False):
         time_meter = AverageMeter()
 
         # New
+        probe_loss_meter = AverageMeter()
         probe_acc_meter = AverageMeter()
         ijepa_loss_meter = AverageMeter()
         pos_loss_meter = AverageMeter()
@@ -364,7 +369,8 @@ def main(args, port=40112, resume_preempt=False):
                 # Original I-JEPA objective
                 def forward_target():
                     with torch.no_grad():
-                        h = target_encoder(imgs)
+                        # h = target_encoder(imgs)
+                        h, _ = target_encoder(imgs)  # [probe] _ are logits detached for probing
                         h = F.layer_norm(h, (h.size(-1),))  # normalize over feature-dim
                         B = len(h)
                         # -- create targets (masked regions of h)
@@ -373,27 +379,26 @@ def main(args, port=40112, resume_preempt=False):
                         return h
 
                 def forward_context():
-                    z = encoder(imgs, masks_enc)
+                    z, logits = encoder(imgs, masks_enc)  # [probe] logits are detached
                     z = predictor(z, masks_enc, masks_pred)
-                    return z
+                    return z, logits
 
                 def loss_fn(z, h):
                     loss = F.smooth_l1_loss(z, h)
-                    loss = AllReduce.apply(loss)
                     return loss
                 # ----------------------------------------------------------- 
 
                 # ----------------------------------------------------------- #
                 # Enhancement with position prediction
                 def pos_forward_context():
-                    z, pos_logits, pos_bool, pos_targets = encoder(imgs, 
+                    z, logits, pos_logits, pos_bool, pos_targets = encoder(imgs, 
                                                                    masks_enc, 
                                                                    pos_drop_ratio,
                                                                    use_pos_predictor=True)
                     # Notice that this z has pos_embed partially dropped
                     z = predictor(z, masks_enc, masks_pred)
 
-                    return z, pos_logits, pos_bool, pos_targets
+                    return z, logits, pos_logits, pos_bool, pos_targets
 
                 def pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets):
                     # ---------------------------------------------------- #
@@ -420,32 +425,56 @@ def main(args, port=40112, resume_preempt=False):
                     return ijepa_loss, pos_loss
                 # ----------------------------------------------------------- 
 
+                # --------------------------------------------------------------- #
+                # Probing for this iteration
+                def probe_loss_acc(logits, imgs_targets):
+                    # [probe] logits are detached
+                    probe_loss = F.cross_entropy(logits, imgs_targets)
+                    probe_acc = (logits.argmax(dim=1) == imgs_targets).float().mean()
+                    return probe_loss, probe_acc
+                # ---------------------------------------------------------------
+
                 # Step 1. Forward
                 with torch.cuda.amp.autocast(dtype=torch.bfloat16, enabled=use_bfloat16):
                     # Get the target
                     h = forward_target()
 
-                    # ---------------------
+                    # ------------------------------------------
                     # Original i-jepa objective
                     if not use_pos_predictor:
-                        z = forward_context()
+                        # Get the forward pass for predictor
+                        z, logits = forward_context()
+
+                        # Get the ijepa loss
                         loss = loss_fn(z, h)
-                        ijepa_loss, pos_loss = loss, 0  # Just to hold the name
+                        
+                        # Just to hold the name
+                        ijepa_loss, pos_loss = loss, 0  
 
                     # I-jepa + position prediction
                     else:
-                        z, pos_logits, pos_bool, pos_targets = pos_forward_context()
+                        # Get the forward pass for both predictor and pos predictor
+                        z, logits, pos_logits, pos_bool, pos_targets = pos_forward_context()
+
+                        # Get the ijepa loss and the pos loss
                         ijepa_loss, pos_loss = pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets)
                         loss = ijepa_loss + pos_lambda * pos_loss
-                        loss = AllReduce.apply(loss)
+
+                    # Get the detached probe loss
+                    probe_loss, probe_acc = probe_loss_acc(logits, imgs_targets)
+                    
+                    # Sum up the loss
+                    loss_all = loss + probe_loss  # [probe] logits are detached from encoder
+                    loss_all = AllReduce.apply(loss_all)
+
 
                 #  Step 2. Backward & step
                 if use_bfloat16:
-                    scaler.scale(loss).backward()
+                    scaler.scale(loss_all).backward()
                     scaler.step(optimizer)
                     scaler.update()
                 else:
-                    loss.backward()
+                    loss_all.backward()
                     optimizer.step()
 
                 grad_stats = grad_logger(encoder.named_parameters())
@@ -457,30 +486,22 @@ def main(args, port=40112, resume_preempt=False):
                     for param_q, param_k in zip(encoder.parameters(), target_encoder.parameters()):
                         param_k.data.mul_(m).add_((1.-m) * param_q.detach().data)
 
-                return (float(loss), float(ijepa_loss), float(pos_loss), _new_lr, _new_wd, grad_stats)
+                return (float(loss), float(ijepa_loss), float(pos_loss), float(probe_loss), float(probe_acc),
+                        _new_lr, _new_wd, grad_stats)
 
-            (loss, ijepa_loss, pos_loss, _new_lr, _new_wd, grad_stats), etime = gpu_timer(train_step)
+            # Apply the train step function
+            (loss, ijepa_loss, pos_loss, _new_lr, probe_loss, probe_acc, _new_wd, grad_stats), etime = gpu_timer(train_step)
+
+            # Update the meters
             loss_meter.update(loss)
             time_meter.update(etime)
             ijepa_loss_meter.update(ijepa_loss)
             pos_loss_meter.update(pos_loss)
+            probe_loss_meter.update(probe_loss)
+            probe_acc_meter.update(probe_acc)
 
             # ---------------------------------------------------------------
 
-            # --------------------------------------------------------------- #
-            # Probing for this iteration
-            def probe_step():
-                with torch.no_grad():
-                    features = encoder(imgs)
-                    probe_logits = prober(features)
-                    probe_acc = (probe_logits.argmax(dim=1) == imgs_targets).float().mean()
-
-                return probe_acc
-
-            if epoch % probe_interval:
-                probe_acc = probe_step()
-                probe_acc_meter.update(probe_acc)
-            # ---------------------------------------------------------------
 
             # --------------------------------------------------------------- #
             # Logging for this iteration
@@ -492,27 +513,30 @@ def main(args, port=40112, resume_preempt=False):
                     logger.info('[%d, %5d] [loss: %.3f] '
                                 '[ijepa loss: %.3f] '
                                 '[pos loss: %.3f] '
-                                '[probe acc: %.3f] '
+                                '[probe loss: %.3f] '
+                                '[probe acc: %.4f] '
                                 # '[masks: %.1f %.1f] '
                                 '[wd: %.2e] [lr: %.2e] '
-                                '[mem: %.2e] '
+                                # '[mem: %.2e] '
                                 '(%.1f ms)'
                                 % (epoch + 1, itr,
                                    loss_meter.avg,
                                    ijepa_loss_meter.avg,
                                    pos_loss_meter.avg,
+                                   probe_loss_meter.avg,
                                    probe_acc_meter.avg,
                                 #    maskA_meter.avg,
                                 #    maskB_meter.avg,
                                    _new_wd,
                                    _new_lr,
-                                   torch.cuda.max_memory_allocated() / 1024.**2,
+                                #    torch.cuda.max_memory_allocated() / 1024.**2,
                                    time_meter.avg))
                     # Log to wandb
                     if rank == 0:
                         wandb.log({'loss': loss_meter.avg,
                                    'ijepa loss': ijepa_loss_meter.avg,
                                    'pos loss': pos_loss_meter.avg,
+                                   'probe loss': probe_loss_meter.avg,
                                    'probe acc': probe_acc_meter.avg,
                                   })
 
@@ -533,7 +557,8 @@ def main(args, port=40112, resume_preempt=False):
         logger.info(f'avg. loss {loss_meter.avg:.3f}')
         logger.info(f'avg. ijepa loss {ijepa_loss_meter.avg:.3f}')
         logger.info(f'avg. pos loss {pos_loss_meter.avg:.3f}')
-        logger.info(f'avg. probe acc {probe_acc_meter.avg:.3f}')
+        logger.info(f'avg. probe loss {probe_loss_meter.avg:.3f}')
+        logger.info(f'avg. probe acc {probe_acc_meter.avg:.4f}')
         save_checkpoint(epoch + 1)
 
         # For wandb 
@@ -541,6 +566,7 @@ def main(args, port=40112, resume_preempt=False):
             wandb.log({'avg. loss': loss_meter.avg,
                        'avg. ijepa loss': ijepa_loss_meter.avg,
                        'avg. pos loss': pos_loss_meter.avg,
+                       'avg. probe loss': probe_loss_meter.avg,
                        'avg. probe acc': probe_acc_meter.avg,
                         })
         

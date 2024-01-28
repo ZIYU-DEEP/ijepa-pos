@@ -17,6 +17,7 @@ try:
 except Exception:
     pass
 
+import random
 import copy
 import logging
 import sys
@@ -57,6 +58,7 @@ checkpoint_freq = 5  # the epoch
 # --
 
 _GLOBAL_SEED = 0
+random.seed(_GLOBAL_SEED)
 np.random.seed(_GLOBAL_SEED)
 torch.manual_seed(_GLOBAL_SEED)
 torch.backends.cudnn.benchmark = True

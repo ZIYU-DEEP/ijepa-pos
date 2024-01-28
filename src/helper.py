@@ -68,13 +68,15 @@ def init_model(
     decoder_embed_dim=256,   # new for pos
     decoder_num_heads=2,     # new for pos
     decoder_depth=2,         # new for pos
+    n_categories=1000,       # new for probing
 ):
     encoder = vit.__dict__[model_name](
         img_size=[crop_size],
         patch_size=patch_size,
         decoder_embed_dim=decoder_embed_dim,
         decoder_num_heads=decoder_num_heads,
-        decoder_depth=decoder_depth)
+        decoder_depth=decoder_depth,
+        n_categories=n_categories)
 
     predictor = vit.__dict__['vit_predictor'](
         num_patches=encoder.patch_embed.num_patches,

@@ -1,0 +1,305 @@
+
+INFO:root:/ibex/user/linj0b/logs/ijepa-pos/vit_small/pos/bs256_lr_0.001_ep300_ps_14_pr0.25_pl0.2_sl0.0002_fl1e-06_fw0.4_wp40_wd0.04_de256_dh8_dd2_ucFalse_ugFalse_uhFalse
+INFO:root:VisionTransformer(
+  (blocks): ModuleList(
+    (0-11): 12 x Block(
+      (norm1): LayerNorm((384,), eps=1e-06, elementwise_affine=True)
+      (attn): Attention(
+        (qkv): Linear(in_features=384, out_features=1152, bias=True)
+        (attn_drop): Dropout(p=0.0, inplace=False)
+        (proj): Linear(in_features=384, out_features=384, bias=True)
+        (proj_drop): Dropout(p=0.0, inplace=False)
+      )
+      (drop_path): Identity()
+      (norm2): LayerNorm((384,), eps=1e-06, elementwise_affine=True)
+      (mlp): MLP(
+        (fc1): Linear(in_features=384, out_features=1536, bias=True)
+        (act): GELU(approximate='none')
+        (fc2): Linear(in_features=1536, out_features=384, bias=True)
+        (drop): Dropout(p=0.0, inplace=False)
+      )
+    )
+  )
+  (norm): LayerNorm((384,), eps=1e-06, elementwise_affine=True)
+  (avg_pool): FeatAvgPool(
+    (avg_pool): AdaptiveAvgPool1d(output_size=1)
+  )
+  (patch_embed): PatchEmbed(
+    (proj): Conv2d(3, 384, kernel_size=(14, 14), stride=(14, 14))
+  )
+  (decoder_embed): Linear(in_features=384, out_features=256, bias=True)
+  (decoder_blocks): ModuleList(
+    (0-1): 2 x Block(
+      (norm1): LayerNorm((256,), eps=1e-06, elementwise_affine=True)
+      (attn): Attention(
+        (qkv): Linear(in_features=256, out_features=768, bias=True)
+        (attn_drop): Dropout(p=0.0, inplace=False)
+        (proj): Linear(in_features=256, out_features=256, bias=True)
+        (proj_drop): Dropout(p=0.0, inplace=False)
+      )
+      (drop_path): Identity()
+      (norm2): LayerNorm((256,), eps=1e-06, elementwise_affine=True)
+      (mlp): MLP(
+        (fc1): Linear(in_features=256, out_features=1024, bias=True)
+        (act): GELU(approximate='none')
+        (fc2): Linear(in_features=1024, out_features=256, bias=True)
+        (drop): Dropout(p=0.0, inplace=False)
+      )
+    )
+  )
+  (decoder_norm): LayerNorm((256,), eps=1e-06, elementwise_affine=True)
+  (decoder_pred): Linear(in_features=256, out_features=256, bias=True)
+  (prober): Linear(in_features=384, out_features=100, bias=True)
+)
+INFO:root:making imagenet data transforms
+INFO:root:data-path /ibex/user/linj0b/data/imagenet_100/train/
+INFO:root:Initialized ImageNet
+INFO:root:ImageNet dataset created
+INFO:root:ImageNet unsupervised data loader created
+INFO:root:Using AdamW
+INFO:root:Epoch 1
+INFO:root:[1,     0] [loss: 1.569] [ijepa loss: 0.447] [pos loss: 5.608] [probe loss: 0.004] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.63e+00] (1760.9 ms)
+INFO:root:[1,     0] grad_stats: [3.01e-02 2.20e-02] (6.61e-03, 6.14e-01)
+INFO:root:[1,    20] [loss: 1.356] [ijepa loss: 0.315] [pos loss: 5.203] [probe loss: 0.013] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.59e+00] (382.9 ms)
+INFO:root:[1,    20] grad_stats: [5.32e-04 3.07e-03] (6.33e-05, 6.84e-01)
+INFO:root:[1,    40] [loss: 1.280] [ijepa loss: 0.256] [pos loss: 5.119] [probe loss: 0.015] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.59e+00] (360.7 ms)
+INFO:root:[1,    40] grad_stats: [9.53e-02 2.47e-02] (5.99e-03, 5.78e-01)
+INFO:root:[1,    60] [loss: 1.226] [ijepa loss: 0.212] [pos loss: 5.070] [probe loss: 0.017] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.57e+00] (330.9 ms)
+INFO:root:[1,    60] grad_stats: [1.27e-02 3.36e-03] (8.17e-04, 5.79e-01)
+INFO:root:[1,    80] [loss: 1.181] [ijepa loss: 0.180] [pos loss: 5.002] [probe loss: 0.017] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.53e+00] (311.7 ms)
+INFO:root:[1,    80] grad_stats: [4.96e-02 5.82e-03] (4.13e-03, 5.27e-01)
+INFO:root:[1,   100] [loss: 1.144] [ijepa loss: 0.158] [pos loss: 4.933] [probe loss: 0.019] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.52e+00] (299.5 ms)
+INFO:root:[1,   100] grad_stats: [3.88e-02 8.86e-03] (3.57e-03, 4.85e-01)
+INFO:root:[1,   120] [loss: 1.116] [ijepa loss: 0.142] [pos loss: 4.869] [probe loss: 0.021] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.52e+00] (294.5 ms)
+INFO:root:[1,   120] grad_stats: [2.46e-02 4.13e-03] (1.83e-03, 4.51e-01)
+INFO:root:avg. loss 1.113
+INFO:root:avg. ijepa loss 0.140
+INFO:root:avg. pos loss 4.863
+INFO:root:avg. probe loss 0.021
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 2
+INFO:root:[2,     0] [loss: 0.947] [ijepa loss: 0.059] [pos loss: 4.440] [probe loss: 0.027] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.53e+00] (651.5 ms)
+INFO:root:[2,     0] grad_stats: [3.14e-02 5.65e-03] (2.35e-03, 4.30e-01)
+INFO:root:[2,    20] [loss: 0.924] [ijepa loss: 0.060] [pos loss: 4.319] [probe loss: 0.029] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.54e+00] (384.5 ms)
+INFO:root:[2,    20] grad_stats: [6.92e-02 5.74e-03] (3.89e-03, 4.60e-01)
+INFO:root:[2,    40] [loss: 0.907] [ijepa loss: 0.060] [pos loss: 4.239] [probe loss: 0.027] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.54e+00] (375.1 ms)
+INFO:root:[2,    40] grad_stats: [2.70e-02 6.91e-03] (3.28e-03, 4.61e-01)
+INFO:root:[2,    60] [loss: 0.897] [ijepa loss: 0.060] [pos loss: 4.187] [probe loss: 0.029] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.52e+00] (376.8 ms)
+INFO:root:[2,    60] grad_stats: [3.21e-02 1.67e-02] (3.62e-03, 3.99e-01)
+INFO:root:[2,    80] [loss: 0.883] [ijepa loss: 0.060] [pos loss: 4.114] [probe loss: 0.032] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.52e+00] (380.2 ms)
+INFO:root:[2,    80] grad_stats: [4.01e-02 1.34e-02] (6.38e-03, 4.16e-01)
+INFO:root:[2,   100] [loss: 0.873] [ijepa loss: 0.061] [pos loss: 4.058] [probe loss: 0.034] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.49e+00] (377.1 ms)
+INFO:root:[2,   100] grad_stats: [3.77e-02 8.91e-03] (4.96e-03, 3.92e-01)
+INFO:root:[2,   120] [loss: 0.861] [ijepa loss: 0.062] [pos loss: 3.999] [probe loss: 0.035] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.49e+00] (370.8 ms)
+INFO:root:[2,   120] grad_stats: [3.96e-02 1.49e-02] (6.16e-03, 3.65e-01)
+INFO:root:avg. loss 0.861
+INFO:root:avg. ijepa loss 0.062
+INFO:root:avg. pos loss 3.994
+INFO:root:avg. probe loss 0.035
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 3
+INFO:root:[3,     0] [loss: 0.797] [ijepa loss: 0.066] [pos loss: 3.654] [probe loss: 0.027] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.49e+00] (279.4 ms)
+INFO:root:[3,     0] grad_stats: [4.67e-02 1.95e-02] (5.54e-03, 3.40e-01)
+INFO:root:[3,    20] [loss: 0.792] [ijepa loss: 0.067] [pos loss: 3.624] [probe loss: 0.039] [probe acc: 0.000] [wd: 4.00e-02] [lr: 4.51e+00] (258.2 ms)
+INFO:root:[3,    20] grad_stats: [5.80e-02 4.57e-02] (1.02e-02, 3.68e-01)
+INFO:root:[3,    40] [loss: 0.788] [ijepa loss: 0.069] [pos loss: 3.598] [probe loss: 0.043] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.47e+00] (257.7 ms)
+INFO:root:[3,    40] grad_stats: [5.49e-02 4.52e-02] (9.30e-03, 3.52e-01)
+INFO:root:[3,    60] [loss: 0.781] [ijepa loss: 0.071] [pos loss: 3.547] [probe loss: 0.043] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.44e+00] (259.8 ms)
+INFO:root:[3,    60] grad_stats: [5.98e-02 2.38e-02] (5.18e-03, 3.48e-01)
+INFO:root:[3,    80] [loss: 0.771] [ijepa loss: 0.073] [pos loss: 3.491] [probe loss: 0.044] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.39e+00] (257.0 ms)
+INFO:root:[3,    80] grad_stats: [5.75e-02 3.17e-02] (8.01e-03, 3.53e-01)
+INFO:root:[3,   100] [loss: 0.762] [ijepa loss: 0.075] [pos loss: 3.436] [probe loss: 0.045] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.46e+00] (256.3 ms)
+INFO:root:[3,   100] grad_stats: [5.63e-02 4.28e-02] (8.09e-03, 3.50e-01)
+INFO:root:[3,   120] [loss: 0.753] [ijepa loss: 0.076] [pos loss: 3.385] [probe loss: 0.045] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.40e+00] (256.0 ms)
+INFO:root:[3,   120] grad_stats: [5.85e-02 4.90e-02] (1.09e-02, 3.04e-01)
+INFO:root:avg. loss 0.752
+INFO:root:avg. ijepa loss 0.076
+INFO:root:avg. pos loss 3.380
+INFO:root:avg. probe loss 0.045
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 4
+INFO:root:[4,     0] [loss: 0.668] [ijepa loss: 0.087] [pos loss: 2.907] [probe loss: 0.078] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.41e+00] (425.2 ms)
+INFO:root:[4,     0] grad_stats: [5.05e-02 7.26e-02] (1.23e-02, 3.45e-01)
+INFO:root:[4,    20] [loss: 0.682] [ijepa loss: 0.086] [pos loss: 2.979] [probe loss: 0.046] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.41e+00] (282.6 ms)
+INFO:root:[4,    20] grad_stats: [7.54e-02 4.94e-02] (1.18e-02, 3.20e-01)
+INFO:root:[4,    40] [loss: 0.668] [ijepa loss: 0.087] [pos loss: 2.906] [probe loss: 0.047] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.42e+00] (279.1 ms)
+INFO:root:[4,    40] grad_stats: [8.38e-02 8.32e-02] (1.62e-02, 3.66e-01)
+INFO:root:[4,    60] [loss: 0.652] [ijepa loss: 0.087] [pos loss: 2.823] [probe loss: 0.047] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.45e+00] (300.0 ms)
+INFO:root:[4,    60] grad_stats: [7.78e-02 1.18e-01] (2.35e-02, 4.04e-01)
+INFO:root:[4,    80] [loss: 0.641] [ijepa loss: 0.088] [pos loss: 2.767] [probe loss: 0.047] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.44e+00] (301.2 ms)
+INFO:root:[4,    80] grad_stats: [8.68e-02 4.78e-02] (1.24e-02, 5.86e-01)
+INFO:root:[4,   100] [loss: 0.626] [ijepa loss: 0.088] [pos loss: 2.692] [probe loss: 0.048] [probe acc: 0.000] [wd: 4.01e-02] [lr: 4.43e+00] (293.6 ms)
+INFO:root:[4,   100] grad_stats: [1.18e-01 1.11e-01] (2.19e-02, 4.74e-01)
+INFO:root:[4,   120] [loss: 0.611] [ijepa loss: 0.088] [pos loss: 2.616] [probe loss: 0.048] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.43e+00] (299.5 ms)
+INFO:root:[4,   120] grad_stats: [9.31e-02 7.80e-02] (1.73e-02, 5.35e-01)
+INFO:root:avg. loss 0.610
+INFO:root:avg. ijepa loss 0.088
+INFO:root:avg. pos loss 2.612
+INFO:root:avg. probe loss 0.048
+INFO:root:avg. probe acc 0.000
+INFO:root:Model saved at /ibex/user/linj0b/logs/ijepa-pos/vit_small/pos/bs256_lr_0.001_ep300_ps_14_pr0.25_pl0.2_sl0.0002_fl1e-06_fw0.4_wp40_wd0.04_de256_dh8_dd2_ucFalse_ugFalse_uhFalse/ep{epoch}.pth.tar.
+INFO:root:Epoch 5
+INFO:root:[5,     0] [loss: 0.552] [ijepa loss: 0.083] [pos loss: 2.344] [probe loss: 0.059] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.45e+00] (283.6 ms)
+INFO:root:[5,     0] grad_stats: [8.54e-02 8.33e-02] (1.65e-02, 4.52e-01)
+INFO:root:[5,    20] [loss: 0.502] [ijepa loss: 0.089] [pos loss: 2.067] [probe loss: 0.049] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.46e+00] (332.7 ms)
+INFO:root:[5,    20] grad_stats: [8.60e-02 4.77e-02] (1.34e-02, 5.23e-01)
+INFO:root:[5,    40] [loss: 0.487] [ijepa loss: 0.088] [pos loss: 1.994] [probe loss: 0.053] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.46e+00] (344.4 ms)
+INFO:root:[5,    40] grad_stats: [1.07e-01 7.84e-02] (2.10e-02, 4.01e-01)
+INFO:root:[5,    60] [loss: 0.475] [ijepa loss: 0.088] [pos loss: 1.938] [probe loss: 0.054] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.42e+00] (351.3 ms)
+INFO:root:[5,    60] grad_stats: [1.15e-01 6.06e-02] (1.69e-02, 5.43e-01)
+INFO:root:[5,    80] [loss: 0.462] [ijepa loss: 0.087] [pos loss: 1.875] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.44e+00] (351.2 ms)
+INFO:root:[5,    80] grad_stats: [9.31e-02 6.36e-02] (1.56e-02, 6.21e-01)
+INFO:root:[5,   100] [loss: 0.449] [ijepa loss: 0.086] [pos loss: 1.812] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.44e+00] (355.4 ms)
+INFO:root:[5,   100] grad_stats: [1.29e-01 3.28e-02] (1.73e-02, 5.71e-01)
+INFO:root:[5,   120] [loss: 0.435] [ijepa loss: 0.085] [pos loss: 1.748] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.46e+00] (350.1 ms)
+INFO:root:[5,   120] grad_stats: [1.24e-01 4.35e-02] (1.64e-02, 1.09e+00)
+INFO:root:avg. loss 0.434
+INFO:root:avg. ijepa loss 0.085
+INFO:root:avg. pos loss 1.742
+INFO:root:avg. probe loss 0.055
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 6
+INFO:root:[6,     0] [loss: 0.361] [ijepa loss: 0.079] [pos loss: 1.408] [probe loss: 0.090] [probe acc: 0.000] [wd: 4.02e-02] [lr: 4.44e+00] (318.1 ms)
+INFO:root:[6,     0] grad_stats: [1.15e-01 3.75e-02] (1.65e-02, 8.04e-01)
+INFO:root:[6,    20] [loss: 0.353] [ijepa loss: 0.080] [pos loss: 1.364] [probe loss: 0.053] [probe acc: 0.000] [wd: 4.03e-02] [lr: 4.47e+00] (255.0 ms)
+INFO:root:[6,    20] grad_stats: [1.16e-01 6.24e-02] (1.78e-02, 6.86e-01)
+INFO:root:[6,    40] [loss: 0.341] [ijepa loss: 0.078] [pos loss: 1.314] [probe loss: 0.053] [probe acc: 0.000] [wd: 4.03e-02] [lr: 4.51e+00] (256.7 ms)
+INFO:root:[6,    40] grad_stats: [9.58e-02 5.13e-02] (1.55e-02, 6.11e-01)
+INFO:root:[6,    60] [loss: 0.329] [ijepa loss: 0.077] [pos loss: 1.260] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.03e-02] [lr: 4.42e+00] (272.8 ms)
+INFO:root:[6,    60] grad_stats: [1.01e-01 3.46e-02] (1.43e-02, 5.50e-01)
+INFO:root:[6,    80] [loss: 0.319] [ijepa loss: 0.076] [pos loss: 1.214] [probe loss: 0.054] [probe acc: 0.000] [wd: 4.03e-02] [lr: 4.45e+00] (280.3 ms)
+INFO:root:[6,    80] grad_stats: [9.70e-02 4.29e-02] (1.38e-02, 7.06e-01)
+INFO:root:[6,   100] [loss: 0.311] [ijepa loss: 0.074] [pos loss: 1.182] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.03e-02] [lr: 4.46e+00] (291.7 ms)
+INFO:root:[6,   100] grad_stats: [1.06e-01 4.33e-02] (1.46e-02, 6.97e-01)
+INFO:root:[6,   120] [loss: 0.302] [ijepa loss: 0.073] [pos loss: 1.142] [probe loss: 0.055] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.45e+00] (293.0 ms)
+INFO:root:[6,   120] grad_stats: [1.14e-01 3.93e-02] (1.29e-02, 6.34e-01)
+INFO:root:avg. loss 0.301
+INFO:root:avg. ijepa loss 0.073
+INFO:root:avg. pos loss 1.138
+INFO:root:avg. probe loss 0.055
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 7
+INFO:root:[7,     0] [loss: 0.270] [ijepa loss: 0.067] [pos loss: 1.014] [probe loss: 0.039] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.44e+00] (280.1 ms)
+INFO:root:[7,     0] grad_stats: [1.20e-01 2.86e-02] (1.25e-02, 5.83e-01)
+INFO:root:[7,    20] [loss: 0.254] [ijepa loss: 0.064] [pos loss: 0.948] [probe loss: 0.063] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.45e+00] (336.2 ms)
+INFO:root:[7,    20] grad_stats: [8.10e-02 4.00e-02] (1.33e-02, 5.23e-01)
+INFO:root:[7,    40] [loss: 0.241] [ijepa loss: 0.063] [pos loss: 0.887] [probe loss: 0.061] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.45e+00] (351.9 ms)
+INFO:root:[7,    40] grad_stats: [8.28e-02 3.43e-02] (1.34e-02, 5.14e-01)
+INFO:root:[7,    60] [loss: 0.235] [ijepa loss: 0.062] [pos loss: 0.865] [probe loss: 0.061] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.43e+00] (360.4 ms)
+INFO:root:[7,    60] grad_stats: [1.03e-01 5.03e-02] (1.69e-02, 5.01e-01)
+INFO:root:[7,    80] [loss: 0.228] [ijepa loss: 0.061] [pos loss: 0.836] [probe loss: 0.060] [probe acc: 0.000] [wd: 4.04e-02] [lr: 4.45e+00] (360.8 ms)
+INFO:root:[7,    80] grad_stats: [9.72e-02 3.74e-02] (1.56e-02, 5.44e-01)
+INFO:root:[7,   100] [loss: 0.223] [ijepa loss: 0.060] [pos loss: 0.814] [probe loss: 0.059] [probe acc: 0.000] [wd: 4.05e-02] [lr: 4.42e+00] (367.2 ms)
+INFO:root:[7,   100] grad_stats: [8.41e-02 2.13e-02] (9.76e-03, 7.33e-01)
+INFO:root:[7,   120] [loss: 0.219] [ijepa loss: 0.059] [pos loss: 0.797] [probe loss: 0.060] [probe acc: 0.000] [wd: 4.05e-02] [lr: 4.41e+00] (364.6 ms)
+INFO:root:[7,   120] grad_stats: [9.88e-02 2.78e-02] (1.18e-02, 7.66e-01)
+INFO:root:avg. loss 0.218
+INFO:root:avg. ijepa loss 0.059
+INFO:root:avg. pos loss 0.797
+INFO:root:avg. probe loss 0.060
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 8
+INFO:root:[8,     0] [loss: 0.183] [ijepa loss: 0.052] [pos loss: 0.657] [probe loss: 0.047] [probe acc: 0.000] [wd: 4.05e-02] [lr: 4.44e+00] (386.5 ms)
+INFO:root:[8,     0] grad_stats: [8.33e-02 2.04e-02] (1.07e-02, 5.78e-01)
+INFO:root:[8,    20] [loss: 0.184] [ijepa loss: 0.052] [pos loss: 0.661] [probe loss: 0.053] [probe acc: 0.000] [wd: 4.05e-02] [lr: 4.42e+00] (302.3 ms)
+INFO:root:[8,    20] grad_stats: [7.51e-02 1.96e-02] (1.03e-02, 5.13e-01)
+INFO:root:[8,    40] [loss: 0.182] [ijepa loss: 0.051] [pos loss: 0.654] [probe loss: 0.056] [probe acc: 0.000] [wd: 4.05e-02] [lr: 4.42e+00] (325.9 ms)
+INFO:root:[8,    40] grad_stats: [9.29e-02 3.16e-02] (1.31e-02, 5.03e-01)
+INFO:root:[8,    60] [loss: 0.179] [ijepa loss: 0.050] [pos loss: 0.643] [probe loss: 0.059] [probe acc: 0.000] [wd: 4.06e-02] [lr: 4.40e+00] (323.5 ms)
+INFO:root:[8,    60] grad_stats: [7.42e-02 2.76e-02] (1.04e-02, 5.59e-01)
+INFO:root:[8,    80] [loss: 0.176] [ijepa loss: 0.049] [pos loss: 0.633] [probe loss: 0.060] [probe acc: 0.000] [wd: 4.06e-02] [lr: 4.42e+00] (328.6 ms)
+INFO:root:[8,    80] grad_stats: [8.08e-02 2.51e-02] (1.34e-02, 4.88e-01)
+INFO:root:[8,   100] [loss: 0.173] [ijepa loss: 0.049] [pos loss: 0.622] [probe loss: 0.060] [probe acc: 0.000] [wd: 4.06e-02] [lr: 4.41e+00] (314.8 ms)
+INFO:root:[8,   100] grad_stats: [6.93e-02 1.48e-02] (8.15e-03, 4.89e-01)
+INFO:root:[8,   120] [loss: 0.170] [ijepa loss: 0.048] [pos loss: 0.611] [probe loss: 0.060] [probe acc: 0.000] [wd: 4.06e-02] [lr: 4.39e+00] (304.5 ms)
+INFO:root:[8,   120] grad_stats: [8.80e-02 2.58e-02] (1.08e-02, 4.26e-01)
+INFO:root:avg. loss 0.170
+INFO:root:avg. ijepa loss 0.048
+INFO:root:avg. pos loss 0.609
+INFO:root:avg. probe loss 0.060
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 9
+INFO:root:[9,     0] [loss: 0.163] [ijepa loss: 0.043] [pos loss: 0.603] [probe loss: 0.078] [probe acc: 0.000] [wd: 4.06e-02] [lr: 4.41e+00] (378.8 ms)
+INFO:root:[9,     0] grad_stats: [7.75e-02 2.46e-02] (1.01e-02, 5.96e-01)
+INFO:root:[9,    20] [loss: 0.156] [ijepa loss: 0.042] [pos loss: 0.569] [probe loss: 0.078] [probe acc: 0.000] [wd: 4.07e-02] [lr: 4.37e+00] (362.6 ms)
+INFO:root:[9,    20] grad_stats: [8.46e-02 3.39e-02] (1.29e-02, 4.66e-01)
+INFO:root:[9,    40] [loss: 0.153] [ijepa loss: 0.042] [pos loss: 0.557] [probe loss: 0.070] [probe acc: 0.000] [wd: 4.07e-02] [lr: 4.37e+00] (317.4 ms)
+INFO:root:[9,    40] grad_stats: [1.00e-01 2.14e-02] (9.06e-03, 8.03e-01)
+INFO:root:[9,    60] [loss: 0.152] [ijepa loss: 0.041] [pos loss: 0.551] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.07e-02] [lr: 4.42e+00] (308.6 ms)
+INFO:root:[9,    60] grad_stats: [7.20e-02 2.12e-02] (9.24e-03, 5.22e-01)
+INFO:root:[9,    80] [loss: 0.147] [ijepa loss: 0.041] [pos loss: 0.532] [probe loss: 0.069] [probe acc: 0.000] [wd: 4.07e-02] [lr: 4.38e+00] (306.4 ms)
+INFO:root:[9,    80] grad_stats: [7.63e-02 1.82e-02] (7.49e-03, 5.53e-01)
+INFO:root:[9,   100] [loss: 0.144] [ijepa loss: 0.040] [pos loss: 0.518] [probe loss: 0.069] [probe acc: 0.000] [wd: 4.08e-02] [lr: 4.40e+00] (323.1 ms)
+INFO:root:[9,   100] grad_stats: [7.20e-02 2.24e-02] (9.40e-03, 4.56e-01)
+INFO:root:[9,   120] [loss: 0.142] [ijepa loss: 0.040] [pos loss: 0.509] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.08e-02] [lr: 4.41e+00] (326.2 ms)
+INFO:root:[9,   120] grad_stats: [7.16e-02 1.95e-02] (9.08e-03, 5.21e-01)
+INFO:root:avg. loss 0.142
+INFO:root:avg. ijepa loss 0.040
+INFO:root:avg. pos loss 0.509
+INFO:root:avg. probe loss 0.068
+INFO:root:avg. probe acc 0.000
+INFO:root:Model saved at /ibex/user/linj0b/logs/ijepa-pos/vit_small/pos/bs256_lr_0.001_ep300_ps_14_pr0.25_pl0.2_sl0.0002_fl1e-06_fw0.4_wp40_wd0.04_de256_dh8_dd2_ucFalse_ugFalse_uhFalse/ep{epoch}.pth.tar.
+INFO:root:Epoch 10
+INFO:root:[10,     0] [loss: 0.123] [ijepa loss: 0.038] [pos loss: 0.428] [probe loss: 0.105] [probe acc: 0.000] [wd: 4.08e-02] [lr: 4.38e+00] (258.5 ms)
+INFO:root:[10,     0] grad_stats: [7.11e-02 1.95e-02] (8.97e-03, 3.67e-01)
+INFO:root:[10,    20] [loss: 0.124] [ijepa loss: 0.037] [pos loss: 0.436] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.08e-02] [lr: 4.39e+00] (310.7 ms)
+INFO:root:[10,    20] grad_stats: [8.84e-02 1.78e-02] (9.31e-03, 6.72e-01)
+INFO:root:[10,    40] [loss: 0.125] [ijepa loss: 0.036] [pos loss: 0.445] [probe loss: 0.066] [probe acc: 0.000] [wd: 4.09e-02] [lr: 4.38e+00] (297.4 ms)
+INFO:root:[10,    40] grad_stats: [6.44e-02 2.06e-02] (7.83e-03, 4.54e-01)
+INFO:root:[10,    60] [loss: 0.124] [ijepa loss: 0.036] [pos loss: 0.439] [probe loss: 0.067] [probe acc: 0.000] [wd: 4.09e-02] [lr: 4.37e+00] (302.5 ms)
+INFO:root:[10,    60] grad_stats: [6.15e-02 1.83e-02] (8.49e-03, 4.43e-01)
+INFO:root:[10,    80] [loss: 0.122] [ijepa loss: 0.036] [pos loss: 0.432] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.09e-02] [lr: 4.41e+00] (313.1 ms)
+INFO:root:[10,    80] grad_stats: [6.65e-02 1.85e-02] (8.37e-03, 4.36e-01)
+INFO:root:[10,   100] [loss: 0.121] [ijepa loss: 0.036] [pos loss: 0.425] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.10e-02] [lr: 4.40e+00] (324.6 ms)
+INFO:root:[10,   100] grad_stats: [5.71e-02 1.52e-02] (8.30e-03, 3.77e-01)
+INFO:root:[10,   120] [loss: 0.119] [ijepa loss: 0.035] [pos loss: 0.421] [probe loss: 0.068] [probe acc: 0.000] [wd: 4.10e-02] [lr: 4.34e+00] (331.8 ms)
+INFO:root:[10,   120] grad_stats: [7.37e-02 1.81e-02] (8.00e-03, 6.16e-01)
+INFO:root:avg. loss 0.120
+INFO:root:avg. ijepa loss 0.035
+INFO:root:avg. pos loss 0.421
+INFO:root:avg. probe loss 0.068
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 11
+INFO:root:[11,     0] [loss: 0.116] [ijepa loss: 0.033] [pos loss: 0.412] [probe loss: 0.047] [probe acc: 0.000] [wd: 4.10e-02] [lr: 4.41e+00] (274.6 ms)
+INFO:root:[11,     0] grad_stats: [6.14e-02 2.07e-02] (8.14e-03, 4.31e-01)
+INFO:root:[11,    20] [loss: 0.113] [ijepa loss: 0.033] [pos loss: 0.396] [probe loss: 0.070] [probe acc: 0.000] [wd: 4.10e-02] [lr: 4.33e+00] (273.0 ms)
+INFO:root:[11,    20] grad_stats: [5.91e-02 1.96e-02] (7.89e-03, 2.88e-01)
+INFO:root:[11,    40] [loss: 0.112] [ijepa loss: 0.033] [pos loss: 0.396] [probe loss: 0.072] [probe acc: 0.000] [wd: 4.11e-02] [lr: 4.33e+00] (298.5 ms)
+INFO:root:[11,    40] grad_stats: [6.08e-02 1.72e-02] (7.03e-03, 4.75e-01)
+INFO:root:[11,    60] [loss: 0.111] [ijepa loss: 0.033] [pos loss: 0.388] [probe loss: 0.071] [probe acc: 0.000] [wd: 4.11e-02] [lr: 4.35e+00] (302.2 ms)
+INFO:root:[11,    60] grad_stats: [6.05e-02 1.45e-02] (6.64e-03, 4.48e-01)
+INFO:root:[11,    80] [loss: 0.110] [ijepa loss: 0.033] [pos loss: 0.387] [probe loss: 0.071] [probe acc: 0.000] [wd: 4.11e-02] [lr: 4.36e+00] (299.0 ms)
+INFO:root:[11,    80] grad_stats: [4.84e-02 1.41e-02] (6.69e-03, 3.78e-01)
+INFO:root:[11,   100] [loss: 0.109] [ijepa loss: 0.033] [pos loss: 0.383] [probe loss: 0.070] [probe acc: 0.000] [wd: 4.12e-02] [lr: 4.34e+00] (289.4 ms)
+INFO:root:[11,   100] grad_stats: [5.24e-02 1.54e-02] (7.48e-03, 3.29e-01)
+INFO:root:[11,   120] [loss: 0.108] [ijepa loss: 0.033] [pos loss: 0.378] [probe loss: 0.070] [probe acc: 0.000] [wd: 4.12e-02] [lr: 4.34e+00] (297.5 ms)
+INFO:root:[11,   120] grad_stats: [5.19e-02 1.44e-02] (6.63e-03, 4.70e-01)
+INFO:root:avg. loss 0.108
+INFO:root:avg. ijepa loss 0.033
+INFO:root:avg. pos loss 0.378
+INFO:root:avg. probe loss 0.070
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 12
+INFO:root:[12,     0] [loss: 0.110] [ijepa loss: 0.033] [pos loss: 0.384] [probe loss: 0.066] [probe acc: 0.000] [wd: 4.12e-02] [lr: 4.30e+00] (709.1 ms)
+INFO:root:[12,     0] grad_stats: [5.73e-02 1.62e-02] (6.78e-03, 4.50e-01)
+INFO:root:[12,    20] [loss: 0.102] [ijepa loss: 0.032] [pos loss: 0.350] [probe loss: 0.067] [probe acc: 0.000] [wd: 4.12e-02] [lr: 4.37e+00] (388.1 ms)
+INFO:root:[12,    20] grad_stats: [7.05e-02 1.52e-02] (7.27e-03, 4.75e-01)
+INFO:root:[12,    40] [loss: 0.102] [ijepa loss: 0.032] [pos loss: 0.348] [probe loss: 0.069] [probe acc: 0.000] [wd: 4.13e-02] [lr: 4.30e+00] (380.8 ms)
+INFO:root:[12,    40] grad_stats: [5.44e-02 1.40e-02] (6.28e-03, 3.49e-01)
+INFO:root:[12,    60] [loss: 0.101] [ijepa loss: 0.032] [pos loss: 0.347] [probe loss: 0.069] [probe acc: 0.000] [wd: 4.13e-02] [lr: 4.31e+00] (373.7 ms)
+INFO:root:[12,    60] grad_stats: [5.09e-02 2.60e-02] (7.04e-03, 3.17e-01)
+INFO:root:[12,    80] [loss: 0.101] [ijepa loss: 0.032] [pos loss: 0.343] [probe loss: 0.072] [probe acc: 0.000] [wd: 4.13e-02] [lr: 4.29e+00] (376.9 ms)
+INFO:root:[12,    80] grad_stats: [6.03e-02 1.25e-02] (5.78e-03, 2.75e-01)
+INFO:root:[12,   100] [loss: 0.100] [ijepa loss: 0.032] [pos loss: 0.340] [probe loss: 0.072] [probe acc: 0.000] [wd: 4.14e-02] [lr: 4.33e+00] (378.3 ms)
+INFO:root:[12,   100] grad_stats: [6.47e-02 1.34e-02] (6.49e-03, 4.69e-01)
+INFO:root:[12,   120] [loss: 0.099] [ijepa loss: 0.032] [pos loss: 0.336] [probe loss: 0.073] [probe acc: 0.000] [wd: 4.14e-02] [lr: 4.27e+00] (367.8 ms)
+INFO:root:[12,   120] grad_stats: [5.57e-02 1.34e-02] (6.17e-03, 2.79e-01)
+INFO:root:avg. loss 0.099
+INFO:root:avg. ijepa loss 0.032
+INFO:root:avg. pos loss 0.335
+INFO:root:avg. probe loss 0.073
+INFO:root:avg. probe acc 0.000
+INFO:root:Epoch 13
+INFO:root:[13,     0] [loss: 0.098] [ijepa loss: 0.031] [pos loss: 0.333] [probe loss: 0.105] [probe acc: 0.000] [wd: 4.14e-02] [lr: 4.23e+00] (355.8 ms)
+INFO:root:[13,     0] grad_stats: [4.73e-02 1.36e-02] (5.82e-03, 2.88e-01)
+INFO:root:[13,    20] [loss: 0.098] [ijepa loss: 0.031] [pos loss: 0.331] [probe loss: 0.073] [probe acc: 0.000] [wd: 4.15e-02] [lr: 4.33e+00] (274.1 ms)

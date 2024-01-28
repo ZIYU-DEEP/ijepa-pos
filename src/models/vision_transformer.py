@@ -3,6 +3,7 @@ Notes on the edits:
     - Add a lightweight decoder with linear head for pos prediction
     - Add a careful pos dropping strategy based on current masking approach
     - add the get_intermediate_features method
+    - add the linear prober (no batch norm)
 """
 
 from src.masks.utils import apply_masks
@@ -360,6 +361,7 @@ class VisionTransformer(nn.Module):
         decoder_embed_dim=256,   # new for pos
         decoder_num_heads=2,     # new for pos
         decoder_depth=2,         # new for pos
+        n_categories=1000,       # new for probing
         **kwargs
     ):
         super().__init__()
@@ -420,6 +422,11 @@ class VisionTransformer(nn.Module):
             for i in range(decoder_depth)])
         self.decoder_norm = norm_layer(decoder_embed_dim)
         self.decoder_pred = nn.Linear(decoder_embed_dim, num_patches, bias=True)
+        # ----------------------------------------------------------------------
+
+        # ---------------------------------------------------------------------- #
+        # Prober setting (linear evaluation; to detach the feature)
+        self.prober = nn.Linear(embed_dim, n_categories)
         # ----------------------------------------------------------------------
 
         # ---------------------------------------------------------------------- #
@@ -557,6 +564,7 @@ class VisionTransformer(nn.Module):
                 masks=None,
                 pos_drop_ratio: float=0,
                 use_pos_predictor: bool=False,
+                use_prober: bool=False,
                 out_feat_keys: List[str]=None):
         """
         masks: a list of masks; for context there should only be one mask.
@@ -622,7 +630,19 @@ class VisionTransformer(nn.Module):
         if use_pos_predictor:
             assert pos_drop_ratio, 'Only tested when pos are dropped.'
             pos_logits = self.forward_decoder(x)
-            return x, pos_logits, pos_bool, pos_labels
+
+            # ---------------------------------------------------------- #
+            # Handle linear probing
+            # if not use_prober:
+            #     return x, pos_logits, pos_bool, pos_labels
+            # else:
+            #     logits = self.prober(x.data)  # .data so it don't get backprop to enc
+            #     return x, logits, pos_logits, pos_bool, pos_labels
+            
+            logits = self.prober(x.data.mean(dim=1))   # .data so it don't get backprop to enc
+            return x, logits, pos_logits, pos_bool, pos_labels
+
+
 
             # =========================================================
             # USAGE FOR OUR POS_LOGITS
@@ -639,7 +659,17 @@ class VisionTransformer(nn.Module):
 
         # If not use decoder, just classical IJEPA
         else:
-            return x
+            # Handle linear probing
+            # if not use_prober:
+            #     return x
+            # else:
+            #     logits = self.prober(x.data)  # .data so it don't get backprop to enc
+            #     return x, logits
+
+            logits = self.prober(x.data.mean(dim=1))  # .data so it don't get backprop to enc
+            return x, logits
+
+            
         # ----------------------------------------------------------
 
     # ======================================================================= #
