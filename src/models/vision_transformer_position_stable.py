@@ -2,6 +2,7 @@
 Notes on the edits:
     - Add a lightweight decoder with linear head for pos prediction
     - Add a careful pos dropping strategy based on current masking approach
+    - add the get_intermediate_features method
 """
 
 from src.masks.utils import apply_masks
