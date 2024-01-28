@@ -28,6 +28,7 @@ import torch
 import torch.multiprocessing as mp
 import torch.nn.functional as F
 from torch.nn.parallel import DistributedDataParallel
+from pathlib import Path
 
 from src.masks.multiblock import MaskCollator as MBMaskCollator
 from src.masks.utils import apply_masks
@@ -156,12 +157,28 @@ def main(args, resume_preempt=False):
         logger.setLevel(logging.ERROR)
 
     # -- log/checkpointing paths
-    log_file = os.path.join(folder, f'{tag}_r{rank}.csv')
-    save_path = os.path.join(folder, f'{tag}' + '-ep{epoch}.pth.tar')
-    latest_path = os.path.join(folder, f'{tag}-latest.pth.tar')
+    method = 'pos' if use_pos_predictor else 'ijepa'
+    folder = Path(folder) / model_name / method
+    tag = f'bs{batch_size}_lr_{lr}_ep{num_epochs}_ps_{patch_size}_'
+    tag += f'pr{pos_drop_ratio}_pl{pos_lambda}_'
+    tag += f'sl{start_lr}_fl{final_lr}_fw{final_wd}_wp{warmup}_wd{wd}_'
+    tag += f'de{decoder_embed_dim}_dh{decoder_num_heads}_dd{decoder_depth}_'
+    tag += f'uc{use_color_distortion}_ug{use_gaussian_blur}_uh{use_horizontal_flip}'
+    folder = folder / tag
+    os.makedirs(folder, exist_ok=True)
+
+    log_file = folder / f'r{rank}.csv'
+    save_path = folder / f'ep{epoch}.pth.tar'
+    latest_path = folder / f'latest.pth.tar'
+
+    # log_file = os.path.join(folder, f'{tag}_r{rank}.csv')
+    # save_path = os.path.join(folder, f'{tag}' + '-ep{epoch}.pth.tar')
+    # latest_path = os.path.join(folder, f'{tag}-latest.pth.tar')
+
     load_path = None
     if load_model:
-        load_path = os.path.join(folder, r_file) if r_file is not None else latest_path
+        load_path = folder / r_file if r_file is not None else latest_path
+        # load_path = os.path.join(folder, r_file) if r_file is not None else latest_path
 
     # -- make csv_logger
     csv_logger = CSVLogger(log_file,
@@ -179,7 +196,10 @@ def main(args, resume_preempt=False):
         crop_size=crop_size,
         pred_depth=pred_depth,
         pred_emb_dim=pred_emb_dim,
-        model_name=model_name)
+        model_name=model_name,
+        decoder_embed_dim=decoder_embed_dim,
+        decoder_num_heads=decoder_num_heads,
+        decoder_depth=decoder_depth)
     target_encoder = copy.deepcopy(encoder)
 
     # -- set the linear prober
