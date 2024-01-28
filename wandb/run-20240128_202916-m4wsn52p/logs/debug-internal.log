@@ -2785,3 +2785,138 @@
 2024-01-28 21:06:23,222 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
 2024-01-28 21:06:23,222 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
 2024-01-28 21:06:23,223 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:06:24,727 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:24,729 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:24,730 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:24,731 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:06:25,244 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:06:25,731 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:26,212 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:26,213 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:26,214 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:26,217 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:06:26,245 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:06:26,245 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:06:28,247 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:06:31,218 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:36,231 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:37,115 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:37,116 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:37,117 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:37,118 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:06:37,260 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:06:38,222 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:06:38,223 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:06:38,261 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:06:38,262 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:06:41,483 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:44,863 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:44,864 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:44,864 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:44,865 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:06:45,270 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:06:46,270 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:06:46,866 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:48,049 DEBUG   SenderThread:2800010 [sender.py:send():382] send: stats
+2024-01-28 21:06:52,051 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:52,410 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:52,411 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:52,411 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:52,412 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:06:53,222 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:06:53,223 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:06:53,224 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:06:53,275 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:06:54,276 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:06:57,514 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:06:59,604 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:06:59,606 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:06:59,606 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:06:59,607 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:00,280 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:00,281 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:02,281 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:02,607 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:07,011 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:07,012 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:07,012 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:07,014 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:07,287 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:08,027 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:08,222 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:07:08,223 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:07:08,224 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:07:08,288 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:13,507 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:14,878 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:14,879 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:14,879 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:14,880 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:15,292 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:16,293 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:18,050 DEBUG   SenderThread:2800010 [sender.py:send():382] send: stats
+2024-01-28 21:07:19,052 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:21,810 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:21,811 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:21,811 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:21,812 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:22,297 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:23,237 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:07:23,238 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:07:23,263 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:07:23,773 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:23,774 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:23,774 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:23,775 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:24,300 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:24,300 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:24,776 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:26,301 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:29,776 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:34,777 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:34,825 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:34,825 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:34,826 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:34,829 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:35,306 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:36,307 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:38,227 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:07:38,227 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:07:38,228 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:07:40,449 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:42,348 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:42,350 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:42,350 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:42,351 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:43,312 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:44,312 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:46,352 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:48,051 DEBUG   SenderThread:2800010 [sender.py:send():382] send: stats
+2024-01-28 21:07:50,147 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:50,148 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:50,149 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:50,149 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:50,316 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:07:52,150 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:52,318 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:07:53,227 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:07:53,228 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:07:53,228 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:07:57,445 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:07:57,929 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:07:57,930 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:07:57,931 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:07:57,932 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:07:58,322 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:08:02,933 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
+2024-01-28 21:08:04,326 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:08:05,381 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-28 21:08:05,382 DEBUG   SenderThread:2800010 [sender.py:send():382] send: history
+2024-01-28 21:08:05,382 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: summary_record
+2024-01-28 21:08:05,383 INFO    SenderThread:2800010 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-28 21:08:06,327 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/wandb-summary.json
+2024-01-28 21:08:08,227 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-28 21:08:08,228 DEBUG   SenderThread:2800010 [sender.py:send_request():409] send_request: stop_status
+2024-01-28 21:08:08,228 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-28 21:08:08,329 INFO    Thread-12 :2800010 [dir_watcher.py:_on_file_modified():288] file/dir modified: /ibex/user/linj0b/github/ijepa-pos/wandb/run-20240128_202916-m4wsn52p/files/output.log
+2024-01-28 21:08:08,528 DEBUG   HandlerThread:2800010 [handler.py:handle_request():146] handle_request: status_report
