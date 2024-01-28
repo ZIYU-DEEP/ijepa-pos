@@ -419,6 +419,8 @@ def main(args, port=40112, resume_preempt=False):
                     # Get the loss
                     # # We can do position smoothing + attentive reconstruction
                     # # But let's just use the basic cross entropy for now
+                    # # Maybe we should take its mean instead of permute?
+                    # # Or multiply the mask instead of doing slicing?
                     pos_loss = F.cross_entropy(pos_logits.permute(0, 2, 1), pos_targets) 
                     # ----------------------------------------------------           
 
@@ -430,6 +432,8 @@ def main(args, port=40112, resume_preempt=False):
                 def probe_loss_acc(logits, imgs_targets):
                     # [probe] logits are detached
                     probe_loss = F.cross_entropy(logits, imgs_targets)
+
+                    # [issue] double check this part
                     probe_acc = (logits.argmax(dim=1) == imgs_targets).float().mean()
                     return probe_loss, probe_acc
                 # ---------------------------------------------------------------
