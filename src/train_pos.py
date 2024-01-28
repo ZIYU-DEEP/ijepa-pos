@@ -355,6 +355,8 @@ def main(args, resume_preempt=False):
                                                                    pos_drop_ratio,
                                                                    use_pos_predictor=True)
                     # Notice that this z has pos_embed partially dropped
+                    z = predictor(z, masks_enc, masks_pred)
+                    
                     return z, pos_logits, pos_bool, pos_targets
 
                 def pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets):
