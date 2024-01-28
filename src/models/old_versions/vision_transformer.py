@@ -1,22 +1,22 @@
-"""
-Notes on the edits:
-    - Add a lightweight decoder with linear head for pos prediction
-    - Add a careful pos dropping strategy based on current masking approach
-    - add the get_intermediate_features method
-"""
+# Copyright (c) Meta Platforms, Inc. and affiliates.
+# All rights reserved.
+#
+# This source code is licensed under the license found in the
+# LICENSE file in the root directory of this source tree.
+#
 
-from src.masks.utils import apply_masks
-from typing import List, Tuple
+import math
 from functools import partial
+import numpy as np
+
+import torch
+import torch.nn as nn
+
 from src.utils.tensors import (
     trunc_normal_,
     repeat_interleave_batch
 )
-
-import torch.nn as nn
-import numpy as np
-import math
-import torch
+from src.masks.utils import apply_masks
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
@@ -326,17 +326,6 @@ class VisionTransformerPredictor(nn.Module):
         return x
 
 
-class FeatAvgPool(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.avg_pool = nn.AdaptiveAvgPool1d(1)
-
-    def forward(self, x):
-        # bs, seq_len, dims = x.shape
-        x = x.permute((0, 2, 1))
-        return self.avg_pool(x).squeeze()
-
-
 class VisionTransformer(nn.Module):
     """ Vision Transformer """
     def __init__(
@@ -357,77 +346,40 @@ class VisionTransformer(nn.Module):
         drop_path_rate=0.0,
         norm_layer=nn.LayerNorm,
         init_std=0.02,
-        decoder_embed_dim=256,
-        decoder_num_heads=2,
-        decoder_depth=2,
         **kwargs
     ):
         super().__init__()
-
-        # ---------------------------------------------------------------------- #
-        # Encoder settings
         self.num_features = self.embed_dim = embed_dim
         self.num_heads = num_heads
-
-        # Set up the stochastic depth decay rule
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]
-
-        # Set up the encoder blocks
-        self.blocks = nn.ModuleList([
-            Block(dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio,
-                  qkv_bias=qkv_bias, qk_scale=qk_scale, drop=drop_rate,
-                  attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
-            for i in range(depth)])
-        self.norm = norm_layer(embed_dim)
-        self.avg_pool = FeatAvgPool()
-        # ----------------------------------------------------------------------
-
-        # ---------------------------------------------------------------------- #
-        # Patch settings
-        self.patch_embed = PatchEmbed(img_size=img_size[0],
-                                      patch_size=patch_size,
-                                      in_chans=in_chans,
-                                      embed_dim=embed_dim)
+        # --
+        self.patch_embed = PatchEmbed(
+            img_size=img_size[0],
+            patch_size=patch_size,
+            in_chans=in_chans,
+            embed_dim=embed_dim)
         num_patches = self.patch_embed.num_patches
-        # ----------------------------------------------------------------------
-
-        # ---------------------------------------------------------------------- #
-        # Position settings
+        # --
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches, embed_dim), requires_grad=False)
+        
+        # $$$$ Add the mask_pos_token
+        self.mask_pos_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
+
         pos_embed = get_2d_sincos_pos_embed(self.pos_embed.shape[-1],
                                             int(self.patch_embed.num_patches**.5),
                                             cls_token=False)
         self.pos_embed.data.copy_(torch.from_numpy(pos_embed).float().unsqueeze(0))
-        # ----------------------------------------------------------------------
-
-        # ---------------------------------------------------------------------- #
-        # Mask token settings
-        self.mask_pos_token = nn.Parameter(torch.zeros(1, 1, embed_dim), requires_grad=True)
-        # ----------------------------------------------------------------------
-
-        # ---------------------------------------------------------------------- #
-        # Decoder settings (a light weight decoder just for position prediction)
-        # Require additional parameters:
-        # - decoder_emebed_dim
-        # - decoder_num_heads
-        # - decoder_depth
-        self.decoder_embed_dim = decoder_embed_dim
-        self.decoder_embed = nn.Linear(embed_dim, decoder_embed_dim, bias=True)
-        self.decoder_blocks = nn.ModuleList([
-            Block(dim=decoder_embed_dim, num_heads=decoder_num_heads,
-                  mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
-                  drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
-            for i in range(decoder_depth)])
-        self.decoder_norm = norm_layer(decoder_embed_dim)
-        self.decoder_pred = nn.Linear(decoder_embed_dim, num_patches, bias=True)
-        # ----------------------------------------------------------------------
-
-        # ---------------------------------------------------------------------- #
-        # Weight Initialiazation
+        # --
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        self.blocks = nn.ModuleList([
+            Block(
+                dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, qk_scale=qk_scale,
+                drop=drop_rate, attn_drop=attn_drop_rate, drop_path=dpr[i], norm_layer=norm_layer)
+            for i in range(depth)])
+        self.norm = norm_layer(embed_dim)
+        # ------
         self.init_std = init_std
         self.apply(self._init_weights)
         self.fix_init_weight()
-        # ----------------------------------------------------------------------
 
     def fix_init_weight(self):
         def rescale(param, layer_id):
@@ -436,7 +388,7 @@ class VisionTransformer(nn.Module):
         for layer_id, layer in enumerate(self.blocks):
             rescale(layer.attn.proj.weight.data, layer_id + 1)
             rescale(layer.mlp.fc2.weight.data, layer_id + 1)
-
+        
         # $$$$ Also initialize the mask_pos_token
         torch.nn.init.normal_(self.mask_pos_token, std=.02)
 
@@ -453,6 +405,68 @@ class VisionTransformer(nn.Module):
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
+    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
+        B, N, D = x.shape
+        device = x.device
+
+        # Determine the number of positions to drop in the masked area
+        num_pos_to_drop = int(mask.size(1) * pos_drop_ratio)
+
+        # Shuffle mask along the last dimension
+        random_tensor = torch.rand(B, mask.size(1))
+        shuffled_indices = random_tensor.argsort(dim=1)
+        shuffled_mask = mask.gather(1, shuffled_indices)
+
+        # Split the mask into two: one for keeping pos_embed, one for mask_pos_token
+        mask_no_pos = shuffled_mask[:, :num_pos_to_drop]
+        mask_keep_pos = shuffled_mask[:, num_pos_to_drop:]
+
+        # Apply the masks to x
+        x_no_pos = apply_masks(x, [mask_no_pos])
+        x_keep_pos = apply_masks(x, [mask_keep_pos])
+
+        # Apply pos_embed and mask_pos_token accordingly
+        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1)
+        x_no_pos = x_no_pos + mask_pos_tokens
+
+        pos_embed = pos_embed.repeat(B, 1, 1)
+        pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
+        x_keep_pos = x_keep_pos + pos_embed_masked
+
+        # Concatenate the results and shuffle again to restore the original order
+        x = torch.cat([x_no_pos, x_keep_pos], dim=1)
+        restored_indices = torch.argsort(shuffled_indices, dim=1)
+        x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
+
+        return x
+
+
+    def forward(self, x, masks=None):
+        if masks is not None:
+            if not isinstance(masks, list):
+                masks = [masks]
+
+        # -- patchify x
+        x = self.patch_embed(x)
+        B, N, D = x.shape
+
+        # -- add positional embedding to x
+        pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
+        x = x + pos_embed
+
+        # -- mask x
+        if masks is not None:
+            x = apply_masks(x, masks)
+
+        # -- fwd prop
+        for i, blk in enumerate(self.blocks):
+            x = blk(x)
+
+        if self.norm is not None:
+            x = self.norm(x)
+
+        return x
+
     def interpolate_pos_encoding(self, x, pos_embed):
         npatch = x.shape[1] - 1
         N = pos_embed.shape[1] - 1
@@ -468,252 +482,6 @@ class VisionTransformer(nn.Module):
         )
         pos_embed = pos_embed.permute(0, 2, 3, 1).view(1, -1, dim)
         return torch.cat((class_emb.unsqueeze(0), pos_embed), dim=1)
-
-    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
-        """
-        Helper functions to be used in the forward part to drop positions.
-        """
-        # ---------------------------------------------------------- #
-        # Preparation
-        B, _, D = x.shape  # Original shape of x
-        device = x.device
-
-        # Determine the number of positions to drop in the masked area
-        N_m = mask.size(1)  # Number of patches to keep after the mask is applied
-        num_pos_to_drop = int(N_m * pos_drop_ratio)
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Drop the positions
-        # Shuffle mask along the last dimension
-        random_tensor = torch.rand(B, N_m, device=device)
-        shuffled_indices = random_tensor.argsort(dim=1)
-        shuffled_mask = mask.gather(1, shuffled_indices)
-
-        # Split the mask into two: one for keeping pos_embed, one for mask_pos_token
-        mask_no_pos = shuffled_mask[:, :num_pos_to_drop]
-        mask_keep_pos = shuffled_mask[:, num_pos_to_drop:]
-
-        # Apply the masks to x
-        x_no_pos = apply_masks(x, [mask_no_pos])
-        x_keep_pos = apply_masks(x, [mask_keep_pos])
-
-        # Case 1: Replace pos_embed with mask_pos_token
-        mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1).to(device)
-        x_no_pos = x_no_pos + mask_pos_tokens
-
-        # Case 2: Retain the pos_embed
-        pos_embed = pos_embed.repeat(B, 1, 1).to(device)
-        pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
-        x_keep_pos = x_keep_pos + pos_embed_masked
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Get the variables that we want
-        # Concatenate the results and shuffle again to restore the original order
-        x = torch.cat([x_no_pos, x_keep_pos], dim=1)
-        restored_indices = torch.argsort(shuffled_indices, dim=1)
-        x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
-
-        # Create a boolean mask in the shuffled order
-        shuffled_pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)
-        shuffled_pos_drop_mask[:, :num_pos_to_drop] = True  # Mark the first num_pos_to_drop as True
-
-        # Restore the order of the boolean mask to match x_restored
-        pos_bool = shuffled_pos_drop_mask.gather(1, restored_indices)
-
-        # The pos_drop_bool is used to apply on x to get the ones
-        # whose positional embeddings are dropped
-        # to apply it, you should you use it like
-        # x_ = x[pos_drop_bool.unsqueeze(-1).expand(-1, -1, D)].reshape(B, -1, D)
-        # Differently, mask_no_pos contains the original indices (no. of the patch)
-        # and will be used as labels
-
-        # Notice that the labels are sorted as the original order
-        pos_labels = torch.sort(mask_no_pos.detach(), dim=1).values
-
-        # x.shape = (B, N_m, D)
-        # pos_bool.shape = (B, N_m)
-        # pos_labels.shape = (B, int(N_m * pos_drop_ratio))
-        # ----------------------------------------------------------
-
-        return x, pos_bool, pos_labels
-
-    def forward_decoder(self, x):
-        """
-        This will be used at the forward part to
-        get the logits for positions.
-        """
-
-        x = self.decoder_embed(x)
-        for blk in self.decoder_blocks:
-            x = blk(x)
-        x = self.decoder_norm(x)
-        x = self.decoder_pred(x)  # from decoder_embed_dim to num_patches
-
-        return x
-
-    def forward(self, x,
-                masks=None,
-                pos_drop_ratio: float=0,
-                use_pos_predictor: bool=False,
-                out_feat_keys: List[str]=None):
-        """
-        masks: a list of masks; for context there should only be one mask.
-            each mask has shape (batch_size, no. patches to keep)
-
-        pos_drop_ratio: the ratio to drop the positions from the context patches
-
-        user_decoder: we apply a lightweight decoder for position prediction.
-            if we use decoder, we return additional pos_logits, pos_bool, pos_labels
-        """
-        # ---------------------------------------------------------- #
-        # Get features for the evaluation; see methods at the end
-        if out_feat_keys:
-            x = self.get_intermediate_features(x, masks, out_feat_keys)
-            return x
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Handle the mask
-        if masks is not None:
-            if not isinstance(masks, list):
-                masks = [masks]
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Patchify x
-        x = self.patch_embed(x)
-        B, N, D = x.shape
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Get the positional embeddings for each patch
-        pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # When we do not drop the positional embeddings:
-        if not pos_drop_ratio:
-            x += pos_embed
-            if masks is not None:
-                x = apply_masks(x, masks)
-            pos_bool, pos_labels = None, None
-
-        # ---------------------------------------------------------- #
-        # When we drop the positional embeddings:
-        else:
-            assert len(masks) == 1, 'Only one mask is needed for the context.'
-            x, pos_bool, pos_labels = self.apply_pos_drop_mask(
-                x, pos_embed, self.mask_pos_token, masks[0], pos_drop_ratio)
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Forward and apply norm
-        for i, blk in enumerate(self.blocks):
-            x = blk(x)
-
-        if self.norm is not None:
-            x = self.norm(x)
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Get the position prediction results
-        if use_pos_predictor:
-            assert pos_drop_ratio, 'Only tested when pos are dropped.'
-            pos_logits = self.forward_decoder(x)
-            return x, pos_logits, pos_bool, pos_labels
-
-            # Usage for the logits
-            # logits.shape = [B, N_m, N_patches]
-            # pos_labels.shape = [B, int(N_m * pos_drop_ratio)]
-            # We don't predict the labels for those with pos_emb
-            # so we should do:
-            # logits = logits[pos_bool.unsqueeze(-1).expand(
-            #          -1, -1, N_patches)].reshape(
-            #          batch_size, -1, N_patches)
-            # Here N_patches essentially is N_classes for positions
-            # loss_pos = F.cross_entropy(logits.permute(0, 2, 1), labels)
-
-        # If not use decoder, just classical IJEPA
-        else:
-            return x
-        # ----------------------------------------------------------
-
-    # ======================================================================= #
-    # Helper functions to get features (will be called with no_grad for eval)
-    def prepare_tokens(self, x: torch.Tensor, masks=None) -> torch.Tensor:
-
-        # ---------------------------------------------------------- #
-        # We shouldn't use mask for eval, but let's just keep it here
-        if masks is not None:
-            if not isinstance(masks, list):
-                masks = [masks]
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Patchify x
-        x = self.patch_embed(x)
-        B, N, D = x.shape
-        # ----------------------------------------------------------
-
-        # ---------------------------------------------------------- #
-        # Get the positional embeddings for each patch
-        pos_embed = self.interpolate_pos_encoding(x, self.pos_embed)
-
-        # In evaluation we will always add the pos_emb
-        x = x + pos_embed
-
-        # We shouldn't use mask for eval, but let's just keep it here
-        if masks is not None:
-            x = apply_masks(x, masks)
-        # ----------------------------------------------------------
-
-        return x
-
-    def get_intermediate_features(self, x, masks=None,
-            names: List[str]=None) -> List[torch.Tensor]:
-        """
-        Given a list of feature names, return a list of the same length
-        where each output correspond to the desired feature.
-
-        To align with ijepa, the available features are:
-        - lastpool
-        - concatpool4
-        """
-
-        # Prepare tokens (patchify and add positional encoding)
-        x = self.prepare_tokens(x, masks)
-
-        # Determine the number of layers to keep based on requested features
-        keep_last_n = 1 if 'lastpool' in names else 0
-        if any(name.startswith('concatpool') for name in names):
-            keep_last_n = max(keep_last_n, 4)  # Keep last 4 for concatPOOL4
-
-        # Buffer to store outputs of the required last N layers
-        interms_buffer = collections.deque(maxlen=keep_last_n)
-
-        # Forward propagation
-        for i, blk in enumerate(self.blocks):
-            x = blk(x)
-
-            # Append to buffer if in the last N layers
-            if i >= len(self.blocks) - keep_last_n:
-                interms_buffer.append(x)
-
-        if self.norm is not None:
-            x = self.norm(x)
-            interms_buffer[-1] = x
-
-        output = []
-        for name in names:
-            if name == 'lastpool':
-                output.append(self.avg_pool(interms_buffer[-1]))
-            elif name.startswith('concatpool'):
-                concat_features = torch.cat([self.avg_pool(layer) for layer in interms_buffer], dim=-1)
-                output.append(concat_features)
-
-        return output
 
 
 def vit_predictor(**kwargs):
