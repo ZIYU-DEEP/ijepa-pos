@@ -1,15 +1,20 @@
-import math
+"""
+Notes on the edits:
+    - Add a lightweight decoder with linear head for pos prediction
+    - Add a careful pos dropping strategy based on current masking approach
+"""
+
+from src.masks.utils import apply_masks
 from functools import partial
-import numpy as np
-
-import torch
-import torch.nn as nn
-
 from src.utils.tensors import (
     trunc_normal_,
     repeat_interleave_batch
 )
-from src.masks.utils import apply_masks
+
+import torch.nn as nn
+import numpy as np
+import math
+import torch
 
 
 def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
@@ -574,6 +579,17 @@ class VisionTransformer(nn.Module):
             assert pos_drop_ratio, 'Only tested when pos are dropped.'
             pos_logits = self.forward_decoder(x)
             return x, pos_logits, pos_bool, pos_labels
+
+            # Usage for the logits
+            # logits.shape = [B, N_m, N_patches]
+            # pos_labels.shape = [B, int(N_m * pos_drop_ratio)]
+            # We don't predict the labels for those with pos_emb
+            # so we should do:
+            # logits = logits[pos_bool.unsqueeze(-1).expand(
+            #          -1, -1, N_patches)].reshape(
+            #          batch_size, -1, N_patches)
+            # Here N_patches essentially is N_classes for positions
+            # loss_pos = F.cross_entropy(logits.permute(0, 2, 1), labels)
 
         # If not use decoder, just classical IJEPA
         else:
