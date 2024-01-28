@@ -397,13 +397,6 @@ class VisionTransformer(nn.Module):
         restored_indices = torch.argsort(shuffled_indices, dim=1)
         x_restored = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
 
-        # # Create a mask to identify positions with dropped positional embeddings
-        # pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)  # Adjust mask size to [B, N_m]
-        # drop_indices_restored = restored_indices[:, :num_pos_to_drop]
-
-        # # Use advanced indexing to set the dropped positions to True
-        # batch_indices = torch.arange(B, device=device).view(-1, 1)
-        # pos_drop_mask[batch_indices, drop_indices_restored] = True
 
         # Create a boolean mask in the shuffled order
         shuffled_pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)
@@ -412,6 +405,24 @@ class VisionTransformer(nn.Module):
         # Restore the order of the boolean mask to match x_restored
         pos_drop_mask = shuffled_pos_drop_mask.gather(1, restored_indices)
 
+        # TO VERIFY
+        # import random
+        # random.seed(42)
+        # np.random.seed(42)
+        # torch.manual_seed(42)
+        #
+        # encoder = vit_tiny(patch_size=patch_size,
+        #     crop_size=crop_size,
+        #     pred_depth=pred_depth,
+        #     pred_emb_dim=pred_emb_dim).to(device)
+        #
+        # result = encoder(imgs, masks_enc, pos_drop_ratio=0.2)
+        # x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos = result
+        # kk = x[pos_drop_mask.unsqueeze(-1).expand(-1, -1, 192)].view(batch_size, -1, 192)
+        # dd = apply_masks(x_initial, [mask_no_pos])
+        # sorted_tensor, sorted_indices = torch.sort(mask_no_pos, dim=1)
+        # ee = apply_masks(x_initial, [sorted_tensor])
+        # kk == ee
 
         return x_no_pos, x_restored, pos_drop_mask, x_initial, mask_no_pos
 
