@@ -405,7 +405,7 @@ class VisionTransformer(nn.Module):
             if m.bias is not None:
                 nn.init.constant_(m.bias, 0)
 
-    def apply_pos_drop_mask(x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
+    def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
         B, N, D = x.shape
         device = x.device
 
