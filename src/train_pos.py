@@ -294,7 +294,11 @@ def main(args, resume_preempt=False):
         maskA_meter = AverageMeter()
         maskB_meter = AverageMeter()
         time_meter = AverageMeter()
+
+        # New
         probe_acc_meter = AverageMeter()
+        ijepa_loss_meter = AverageMeter()
+        pos_loss_meter = AverageMeter()
 
         for itr, (udata, masks_enc, masks_pred) in enumerate(unsupervised_loader):
 
@@ -320,6 +324,8 @@ def main(args, resume_preempt=False):
                 _new_wd = wd_scheduler.step()
                 # --
 
+                # ----------------------------------------------------------- #
+                # Original I-JEPA objective
                 def forward_target():
                     with torch.no_grad():
                         h = target_encoder(imgs)
@@ -339,12 +345,61 @@ def main(args, resume_preempt=False):
                     loss = F.smooth_l1_loss(z, h)
                     loss = AllReduce.apply(loss)
                     return loss
+                # ----------------------------------------------------------- 
+
+                # ----------------------------------------------------------- #
+                # Enhancement with position prediction
+                def pos_forward_context():
+                    z, pos_logits, pos_bool, pos_targets = encoder(imgs, 
+                                                                   masks_enc, 
+                                                                   pos_drop_ratio,
+                                                                   use_pos_predictor=True)
+                    # Notice that this z has pos_embed partially dropped
+                    return z, pos_logits, pos_bool, pos_targets
+
+                def pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets):
+                    # ---------------------------------------------------- #
+                    # The IJEPA Lokss
+                    ijepa_loss = F.smooth_l1_loss(z, h)
+                    # ----------------------------------------------------
+
+                    # ---------------------------------------------------- #
+                    # The Position Prediction Loss
+                    # Get the no. of patches -> essentially no. of classes
+                    num_patches = pos_logits.size(-1)
+                    
+                    # Only calculate for logits whose positions are dropped
+                    pos_logits = pos_logits[pos_bool.unsqueeze(-1).expand(
+                        -1, -1, num_patches)].reshape(
+                            batch_size, -1, num_patches)  
+                    
+                    # Get the loss
+                    # # We can do position smoothing + attentive reconstruction
+                    # # But let's just use the basic cross entropy for now
+                    pos_loss = F.cross_entropy(pos_logits.permute(0, 2, 1), pos_targets) 
+                    # ----------------------------------------------------           
+
+                    return ijepa_loss, pos_loss
+                # ----------------------------------------------------------- 
 
                 # Step 1. Forward
                 with torch.cuda.amp.autocast(dtype=torch.bfloat16, enabled=use_bfloat16):
+                    # Get the target
                     h = forward_target()
-                    z = forward_context()
-                    loss = loss_fn(z, h)
+
+                    # ---------------------
+                    # Original i-jepa objective
+                    if not use_pos_predictor:
+                        z = forward_context()
+                        loss = loss_fn(z, h)
+                        ijepa_loss, pos_loss = loss, 0  # Just to hold the name
+
+                    # I-jepa + position prediction
+                    else:
+                        z, pos_logits, pos_bool, pos_targets = pos_forward_context()
+                        ijepa_loss, pos_loss = pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets)
+                        loss = ijepa_loss + pos_lambda * pos_loss
+                        loss = AllReduce.apply(loss)
 
                 #  Step 2. Backward & step
                 if use_bfloat16:
@@ -354,6 +409,7 @@ def main(args, resume_preempt=False):
                 else:
                     loss.backward()
                     optimizer.step()
+
                 grad_stats = grad_logger(encoder.named_parameters())
                 optimizer.zero_grad()
 
@@ -363,11 +419,14 @@ def main(args, resume_preempt=False):
                     for param_q, param_k in zip(encoder.parameters(), target_encoder.parameters()):
                         param_k.data.mul_(m).add_((1.-m) * param_q.detach().data)
 
-                return (float(loss), _new_lr, _new_wd, grad_stats)
+                return (float(loss), float(ijepa_loss), float(pos_loss), _new_lr, _new_wd, grad_stats)
 
-            (loss, _new_lr, _new_wd, grad_stats), etime = gpu_timer(train_step)
+            (loss, ijepa_loss, pos_loss, _new_lr, _new_wd, grad_stats), etime = gpu_timer(train_step)
             loss_meter.update(loss)
             time_meter.update(etime)
+            ijepa_loss_meter.update(ijepa_loss)
+            pos_loss_meter.update(pos_loss)
+
             # ---------------------------------------------------------------
 
             # --------------------------------------------------------------- #
@@ -384,23 +443,28 @@ def main(args, resume_preempt=False):
             if epoch % probe_interval:
                 probe_acc = probe_step()
                 probe_acc_meter.update(probe_acc)
+            # ---------------------------------------------------------------
 
             # --------------------------------------------------------------- #
             # Logging for this iteration
             def log_stats():
                 csv_logger.log(epoch + 1, itr, loss, maskA_meter.val, maskB_meter.val, etime)
                 if (itr % log_freq == 0) or np.isnan(loss) or np.isinf(loss):
-                    logger.info('[%d, %5d] loss: %.3f '
-                                'probe acc: %.3f '
-                                'masks: %.1f %.1f '
+                    logger.info('[%d, %5d] [loss: %.3f] '
+                                '[ijepa loss: %.3f] '
+                                '[pos loss: %.3f] '
+                                '[probe acc: %.3f] '
+                                # '[masks: %.1f %.1f] '
                                 '[wd: %.2e] [lr: %.2e] '
                                 '[mem: %.2e] '
                                 '(%.1f ms)'
                                 % (epoch + 1, itr,
                                    loss_meter.avg,
+                                   ijepa_loss_meter.avg,
+                                   pos_loss_meter.avg,
                                    probe_acc_meter.avg,
-                                   maskA_meter.avg,
-                                   maskB_meter.avg,
+                                #    maskA_meter.avg,
+                                #    maskB_meter.avg,
                                    _new_wd,
                                    _new_lr,
                                    torch.cuda.max_memory_allocated() / 1024.**2,
@@ -422,6 +486,8 @@ def main(args, resume_preempt=False):
 
         # -- Save Checkpoint after every epoch
         logger.info(f'avg. loss {loss_meter.avg:.3f}')
+        logger.infor(f'avg. ijepa loss {ijepa_loss_meter.avg:.3f}')
+        logger.info(f'avg. pos loss {pos_loss_meter.avg:.3f}')
         logger.info(f'avg. probe acc {probe_acc_meter.avg:.3f}')
         save_checkpoint(epoch + 1)
 
