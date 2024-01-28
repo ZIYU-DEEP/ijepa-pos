@@ -183,7 +183,7 @@ def main(args, resume_preempt=False):
     target_encoder = copy.deepcopy(encoder)
 
     # -- set the linear prober
-    prober = torch.nn.Linear(encoder.module.embed_dim, n_categories).to(device)
+    prober = torch.nn.Linear(encoder.embed_dim, n_categories).to(device)
 
     # -- make data transforms
     mask_collator = MBMaskCollator(
@@ -235,9 +235,12 @@ def main(args, resume_preempt=False):
         num_epochs=num_epochs,
         ipe_scale=ipe_scale,
         use_bfloat16=use_bfloat16)
+    
     encoder = DistributedDataParallel(encoder, static_graph=True)
     predictor = DistributedDataParallel(predictor, static_graph=True)
     target_encoder = DistributedDataParallel(target_encoder)
+    prober = DistributedDataParallel(prober)
+
     for p in target_encoder.parameters():
         p.requires_grad = False
 
@@ -419,6 +422,7 @@ def main(args, resume_preempt=False):
 
         # -- Save Checkpoint after every epoch
         logger.info(f'avg. loss {loss_meter.avg:.3f}')
+        logger.info(f'avg. probe acc {probe_acc_meter.avg:.3f}')
         save_checkpoint(epoch + 1)
 
 
