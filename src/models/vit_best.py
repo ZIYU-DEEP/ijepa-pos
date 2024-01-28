@@ -364,8 +364,6 @@ class VisionTransformer(nn.Module):
     def apply_pos_drop_mask(self, x, pos_embed, mask_pos_token, mask, pos_drop_ratio):
         B, _, D = x.shape  # Original shape of x
         device = x.device
-        x_initial = x.clone()  # Save the original x for later use
-
 
         # Determine the number of positions to drop in the masked area
         N_m = mask.size(1)  # Number of patches to keep after the mask is applied
@@ -386,45 +384,33 @@ class VisionTransformer(nn.Module):
 
         # Apply pos_embed and mask_pos_token accordingly
         mask_pos_tokens = mask_pos_token.repeat(B, num_pos_to_drop, 1).to(device)
-        # x_no_pos = x_no_pos + mask_pos_tokens
+        x_no_pos = x_no_pos + mask_pos_tokens
 
         pos_embed = pos_embed.repeat(B, 1, 1).to(device)
         pos_embed_masked = apply_masks(pos_embed, [mask_keep_pos])
-        # x_keep_pos = x_keep_pos + pos_embed_masked
+        x_keep_pos = x_keep_pos + pos_embed_masked
 
         # Concatenate the results and shuffle again to restore the original order
         x = torch.cat([x_no_pos, x_keep_pos], dim=1)
         restored_indices = torch.argsort(shuffled_indices, dim=1)
-        x_restored = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
-
+        x = x.gather(1, restored_indices.unsqueeze(-1).expand(-1, -1, D))
 
         # Create a boolean mask in the shuffled order
         shuffled_pos_drop_mask = torch.zeros(B, N_m, dtype=torch.bool, device=device)
         shuffled_pos_drop_mask[:, :num_pos_to_drop] = True  # Mark the first num_pos_to_drop as True
 
         # Restore the order of the boolean mask to match x_restored
-        pos_drop_mask = shuffled_pos_drop_mask.gather(1, restored_indices)
+        pos_bool = shuffled_pos_drop_mask.gather(1, restored_indices)
 
-        # TO VERIFY
-        # import random
-        # random.seed(42)
-        # np.random.seed(42)
-        # torch.manual_seed(42)
-        #
-        # encoder = vit_tiny(patch_size=patch_size,
-        #     crop_size=crop_size,
-        #     pred_depth=pred_depth,
-        #     pred_emb_dim=pred_emb_dim).to(device)
-        #
-        # result = encoder(imgs, masks_enc, pos_drop_ratio=0.2)
-        # x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos = result
-        # kk = x[pos_drop_mask.unsqueeze(-1).expand(-1, -1, 192)].view(batch_size, -1, 192)
-        # dd = apply_masks(x_initial, [mask_no_pos])
-        # sorted_tensor, sorted_indices = torch.sort(mask_no_pos, dim=1)
-        # ee = apply_masks(x_initial, [sorted_tensor])
-        # kk == ee
+        # The pos_drop_bool is used to apply on x to get the ones
+        # whose positional embeddings are dropped
+        # to apply it, you should you use it like
+        # x_ = x[pos_drop_bool.unsqueeze(-1).expand(-1, -1, D)].reshape(B, -1, D)
+        # Differently, mask_no_pos contains the original indices (no. of the patch)
+        # and will be used as labels
+        pos_labels = torch.sort(mask_no_pos.detach(), dim=1).values
 
-        return x_no_pos, x_restored, pos_drop_mask, x_initial, mask_no_pos
+        return x, pos_bool, pos_labels
 
 
     def forward_decoder(self, x):
@@ -433,6 +419,7 @@ class VisionTransformer(nn.Module):
         for blk in self.decoder_blocks:
             x = blk(x)
         x = self.decoder_norm(x)
+        x = self.decoder_pred(x)  # from decoder_embed_dim to num_patches
 
         return x
 
@@ -451,15 +438,14 @@ class VisionTransformer(nn.Module):
         # When we do not drop the positional embeddings:
         if not pos_drop_ratio:
             x += pos_embed
-            if masks is not None: x = apply_masks(x, masks)
-            mask_test = None, None
+
+            if masks is not None:
+                x = apply_masks(x, masks)
 
         else:
             assert len(masks) == 1, 'Only one mask is needed for the context.'
-            x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos = self.apply_pos_drop_mask(
+            x, pos_bool, pos_labels = self.apply_pos_drop_mask(
                 x, pos_embed, self.mask_pos_token, masks[0], pos_drop_ratio)
-
-            return x_no_pos, x, pos_drop_mask, x_initial, mask_no_pos
 
         # -- fwd prop
         for i, blk in enumerate(self.blocks):
@@ -469,11 +455,12 @@ class VisionTransformer(nn.Module):
             x = self.norm(x)
 
         if use_decoder:
-            x = self.forward_decoder(x)
-            x = self.decoder_pred(x)  # from embed_dim to num_patches
-            return x, pos_drop_mask
+            assert pos_drop_ratio, 'The function is only tested when pos are dropped.'
+            logits = self.forward_decoder(x)
+            return x, logits, pos_bool, pos_labels
 
-        return x
+        else:
+            return x  # The classical IJEPA
 
     def interpolate_pos_encoding(self, x, pos_embed):
         npatch = x.shape[1] - 1
