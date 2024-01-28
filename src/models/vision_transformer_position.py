@@ -17,7 +17,7 @@ import math
 import torch
 
 
-def get_2d_sincos_pos_embed(embed_dim, grid_size, cls_token=False):
+def get_2d_sincos_pos_embed(embed_dim, gvisirid_size, cls_token=False):
     """
     grid_size: int of the grid height and width
     return:
@@ -519,7 +519,7 @@ class VisionTransformer(nn.Module):
 
         return x
 
-    def forward(self, x, masks=None, pos_drop_ratio=0, use_decoder=False):
+    def forward(self, x, masks=None, pos_drop_ratio=0, use_pos_predictor=False):
         """
         masks: a list of masks; for context there should only be one mask.
             each mask has shape (batch_size, no. patches to keep)
@@ -575,7 +575,7 @@ class VisionTransformer(nn.Module):
 
         # ---------------------------------------------------------- #
         # Get the position prediction results
-        if use_decoder:
+        if use_pos_predictor:
             assert pos_drop_ratio, 'Only tested when pos are dropped.'
             pos_logits = self.forward_decoder(x)
             return x, pos_logits, pos_bool, pos_labels
