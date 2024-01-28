@@ -65,7 +65,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
 
 
-def main(args, resume_preempt=False):
+def main(args, port=40112, resume_preempt=False):
 
     # ----------------------------------------------------------------------- #
     #  PASSED IN PARAMS FROM CONFIG FILE
@@ -151,7 +151,7 @@ def main(args, resume_preempt=False):
         pass
 
     # -- init torch distributed backend
-    world_size, rank = init_distributed()
+    world_size, rank = init_distributed(port=port)
     logger.info(f'Initialized (rank/world-size) {rank}/{world_size}')
     if rank > 0:
         logger.setLevel(logging.ERROR)
@@ -168,7 +168,7 @@ def main(args, resume_preempt=False):
     os.makedirs(folder, exist_ok=True)
 
     log_file = folder / f'r{rank}.csv'
-    save_path = folder / f'ep{epoch}.pth.tar'
+    save_path = folder / 'ep{epoch}.pth.tar'
     latest_path = folder / f'latest.pth.tar'
 
     # log_file = os.path.join(folder, f'{tag}_r{rank}.csv')

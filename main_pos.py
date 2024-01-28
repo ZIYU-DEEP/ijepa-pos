@@ -15,6 +15,10 @@ import yaml
 from src.utils.distributed import init_distributed
 from src.train_pos import main as app_main
 
+import socket
+import errno
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument(
     '--fname', type=str,
@@ -25,7 +29,16 @@ parser.add_argument(
     help='which devices to use on local machine')
 
 
-def process_main(rank, fname, world_size, devices):
+def find_free_port():
+    """
+    Tries to find a free port on the localhost.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('', 0))  # Bind to a free port provided by the host.
+        return s.getsockname()[1]  # Return the port number assigned.
+    
+
+def process_main(rank, fname, world_size, devices, port):
     import os
     os.environ['CUDA_VISIBLE_DEVICES'] = str(devices[rank].split(':')[-1])
 
@@ -47,13 +60,16 @@ def process_main(rank, fname, world_size, devices):
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(params)
 
-    world_size, rank = init_distributed(rank_and_world_size=(rank, world_size))
+    world_size, rank = init_distributed(port=port,
+                                        rank_and_world_size=(rank, world_size))
     logger.info(f'Running... (rank: {rank}/{world_size})')
-    app_main(args=params)
+    app_main(args=params, port=port)
 
 
 if __name__ == '__main__':
     args = parser.parse_args()
+    port = find_free_port()
+    print(f'Find free port {port}.')
 
     num_gpus = len(args.devices)
     mp.set_start_method('spawn')
@@ -61,5 +77,5 @@ if __name__ == '__main__':
     for rank in range(num_gpus):
         mp.Process(
             target=process_main,
-            args=(rank, args.fname, num_gpus, args.devices)
+            args=(rank, args.fname, num_gpus, args.devices, port)
         ).start()
