@@ -624,16 +624,18 @@ class VisionTransformer(nn.Module):
             pos_logits = self.forward_decoder(x)
             return x, pos_logits, pos_bool, pos_labels
 
-            # Usage for the logits
-            # logits.shape = [B, N_m, N_patches]
+            # =========================================================
+            # USAGE FOR OUR POS_LOGITS
+            # logits.shape = [B, N_m, num_patches]
             # pos_labels.shape = [B, int(N_m * pos_drop_ratio)]
             # We don't predict the labels for those with pos_emb
             # so we should do:
             # logits = logits[pos_bool.unsqueeze(-1).expand(
-            #          -1, -1, N_patches)].reshape(
-            #          batch_size, -1, N_patches)
-            # Here N_patches essentially is N_classes for positions
+            #          -1, -1, num_patches)].reshape(
+            #          batch_size, -1, num_patches)
+            # Here num_patches essentially is num_classes for positions
             # loss_pos = F.cross_entropy(logits.permute(0, 2, 1), labels)
+            # =========================================================
 
         # If not use decoder, just classical IJEPA
         else:

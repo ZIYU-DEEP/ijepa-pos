@@ -46,7 +46,7 @@ optimization:
     ema:
     - 0.996
     - 1.0
-    epochs: 1
+    epochs: 100
     final_lr: 1.0e-06
     final_weight_decay: 0.4
     ipe_scale: 1.0
@@ -63,7 +63,7 @@ probe:
 pos:
     use_pos_predictor: true
     decoder_embed_dim: 256
-    decoder_num_heads: 2
+    decoder_num_heads: 4
     decoder_depth: 2
     pos_drop_ratio: 0.25 
     pos_lambda: 0.1

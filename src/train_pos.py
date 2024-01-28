@@ -51,7 +51,7 @@ from src.transforms import make_transforms
 
 # --
 log_timings = True
-log_freq = 10
+log_freq = 20
 checkpoint_freq = 50
 # --
 
@@ -356,7 +356,7 @@ def main(args, resume_preempt=False):
                                                                    use_pos_predictor=True)
                     # Notice that this z has pos_embed partially dropped
                     z = predictor(z, masks_enc, masks_pred)
-                    
+
                     return z, pos_logits, pos_bool, pos_targets
 
                 def pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets):
@@ -488,7 +488,7 @@ def main(args, resume_preempt=False):
 
         # -- Save Checkpoint after every epoch
         logger.info(f'avg. loss {loss_meter.avg:.3f}')
-        logger.infor(f'avg. ijepa loss {ijepa_loss_meter.avg:.3f}')
+        logger.info(f'avg. ijepa loss {ijepa_loss_meter.avg:.3f}')
         logger.info(f'avg. pos loss {pos_loss_meter.avg:.3f}')
         logger.info(f'avg. probe acc {probe_acc_meter.avg:.3f}')
         save_checkpoint(epoch + 1)
