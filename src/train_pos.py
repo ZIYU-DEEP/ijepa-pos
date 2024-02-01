@@ -187,7 +187,7 @@ def main(args, port=40112, resume_preempt=False):
         wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}'
         if use_pos_predictor: wandb_name += f'_{pos_drop_ratio}_{pos_lambda}'
         wandb.init(entity='info-ssl',
-                   project=f'pos-ijepa-{loader_name}',
+                   project=f'pos-jepa-{loader_name}',
                    name=wandb_name,
                    config=args)
 
@@ -499,7 +499,7 @@ def main(args, port=40112, resume_preempt=False):
                         _new_lr, _new_wd, grad_stats)
 
             # Apply the train step function
-            (loss, ijepa_loss, pos_loss, _new_lr, probe_loss, probe_acc, _new_wd, grad_stats), etime = gpu_timer(train_step)
+            (loss, ijepa_loss, pos_loss, probe_loss, probe_acc, _new_lr, _new_wd, grad_stats), etime = gpu_timer(train_step)
 
             # Update the meters
             loss_meter.update(loss)
