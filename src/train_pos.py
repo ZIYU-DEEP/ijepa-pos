@@ -508,7 +508,6 @@ def main(args, port=40112, resume_preempt=False):
             pos_loss_meter.update(pos_loss)
             probe_loss_meter.update(probe_loss)
             probe_acc_meter.update(probe_acc)
-
             # ---------------------------------------------------------------
 
 
