@@ -63,9 +63,9 @@ probe:
     probe_interval: 1
 
 pos:
-    use_pos_predictor: false
+    use_pos_predictor: true
     decoder_embed_dim: 256
-    decoder_num_heads: 8
+    decoder_num_heads: 16
     decoder_depth: 2
-    pos_drop_ratio: 0 
-    pos_lambda: 0.2
+    pos_drop_ratio: 0.1 
+    pos_lambda: 0.1

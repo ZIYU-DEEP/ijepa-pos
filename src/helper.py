@@ -58,6 +58,37 @@ def load_checkpoint(
     return encoder, predictor, target_encoder, opt, scaler, epoch
 
 
+def load_checkpoint_lin(
+    device,
+    r_path,
+    prober,
+    opt,
+    scaler,
+):
+    try:
+        checkpoint = torch.load(r_path, map_location=torch.device('cpu'))
+        epoch = checkpoint['epoch']
+
+        # -- loading encoder
+        pretrained_dict = checkpoint['prober']
+        msg = prober.load_state_dict(pretrained_dict)
+        logger.info(f'loaded pretrained prober from epoch {epoch} with msg: {msg}')
+
+        # -- loading optimizer
+        opt.load_state_dict(checkpoint['opt'])
+        if scaler is not None:
+            scaler.load_state_dict(checkpoint['scaler'])
+        logger.info(f'loaded optimizers from epoch {epoch}')
+        logger.info(f'read-path: {r_path}')
+        del checkpoint
+
+    except Exception as e:
+        logger.info(f'Encountered exception when loading checkpoint {e}')
+        epoch = 0
+
+    return prober, opt, scaler, epoch
+
+
 def init_model(
     device,
     patch_size=16,
@@ -104,6 +135,41 @@ def init_model(
     predictor.to(device)
     logger.info(encoder)
     return encoder, predictor
+
+
+def init_encoder(
+    device,
+    patch_size=16,
+    model_name='vit_base',
+    crop_size=224,
+    decoder_embed_dim=256,   # new for pos
+    decoder_num_heads=2,     # new for pos
+    decoder_depth=2,         # new for pos
+    n_categories=1000,       # new for probing
+):
+    encoder = vit.__dict__[model_name](
+        img_size=[crop_size],
+        patch_size=patch_size,
+        decoder_embed_dim=decoder_embed_dim,
+        decoder_num_heads=decoder_num_heads,
+        decoder_depth=decoder_depth,
+        n_categories=n_categories)
+
+    def init_weights(m):
+        if isinstance(m, torch.nn.Linear):
+            trunc_normal_(m.weight, std=0.02)
+            if m.bias is not None:
+                torch.nn.init.constant_(m.bias, 0)
+        elif isinstance(m, torch.nn.LayerNorm):
+            torch.nn.init.constant_(m.bias, 0)
+            torch.nn.init.constant_(m.weight, 1.0)
+
+    for m in encoder.modules():
+        init_weights(m)
+
+    encoder.to(device)
+    logger.info(encoder)
+    return encoder
 
 
 def init_opt(
