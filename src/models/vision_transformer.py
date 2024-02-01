@@ -327,6 +327,18 @@ class VisionTransformerPredictor(nn.Module):
         return x
 
 
+class Prober(torch.nn.Module):
+    def __init__(self, in_dim, n_categories):
+        super(Prober, self).__init__()
+        self.linear = torch.nn.Linear(in_dim, n_categories)
+        self.batch_norm = torch.nn.BatchNorm1d(n_categories)
+
+    def forward(self, x):
+        x = self.linear(x)
+        x = self.batch_norm(x)
+        return x
+    
+
 class FeatAvgPool(nn.Module):
     def __init__(self):
         super().__init__()
@@ -426,7 +438,7 @@ class VisionTransformer(nn.Module):
 
         # ---------------------------------------------------------------------- #
         # Prober setting (linear evaluation; to detach the feature)
-        self.prober = nn.Linear(embed_dim, n_categories)
+        self.prober = Prober(embed_dim, n_categories)
         # ----------------------------------------------------------------------
 
         # ---------------------------------------------------------------------- #
@@ -642,8 +654,6 @@ class VisionTransformer(nn.Module):
             logits = self.prober(x.data.mean(dim=1))   # .data so it don't get backprop to enc
             return x, logits, pos_logits, pos_bool, pos_labels
 
-
-
             # =========================================================
             # USAGE FOR OUR POS_LOGITS
             # logits.shape = [B, N_m, num_patches]
@@ -668,8 +678,6 @@ class VisionTransformer(nn.Module):
 
             logits = self.prober(x.data.mean(dim=1))  # .data so it don't get backprop to enc
             return x, logits
-
-            
         # ----------------------------------------------------------
 
     # ======================================================================= #

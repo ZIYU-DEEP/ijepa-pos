@@ -173,3 +173,4 @@ logs/
 dcgm/
 **/*.ipynb
 wandb/
+.vscode/
