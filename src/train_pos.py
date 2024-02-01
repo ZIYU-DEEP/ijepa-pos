@@ -425,8 +425,8 @@ def main(args, port=40112, resume_preempt=False):
 
                     pos_bool = pos_bool.unsqueeze(-1).expand_as(pos_logits)
                     pos_logits = pos_logits[pos_bool].view(-1, num_patches)
-                    pos_labels = pos_labels.view(-1)
-                    pos_loss = F.cross_entropy(pos_logits, pos_labels)
+                    pos_targets = pos_targets.view(-1)
+                    pos_loss = F.cross_entropy(pos_logits, pos_targets)
                     # ----------------------------------------------------           
 
                     return ijepa_loss, pos_loss
