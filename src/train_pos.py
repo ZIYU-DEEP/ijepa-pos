@@ -411,17 +411,22 @@ def main(args, port=40112, resume_preempt=False):
                     # Get the no. of patches -> essentially no. of classes
                     num_patches = pos_logits.size(-1)
                     
-                    # Only calculate for logits whose positions are dropped
-                    pos_logits = pos_logits[pos_bool.unsqueeze(-1).expand(
-                        -1, -1, num_patches)].reshape(
-                            batch_size, -1, num_patches)  
+                    # # Only calculate for logits whose positions are dropped
+                    # pos_logits = pos_logits[pos_bool.unsqueeze(-1).expand(
+                    #     -1, -1, num_patches)].reshape(
+                    #         batch_size, -1, num_patches)  
                     
-                    # Get the loss
-                    # # We can do position smoothing + attentive reconstruction
-                    # # But let's just use the basic cross entropy for now
-                    # # Maybe we should take its mean instead of permute?
-                    # # Or multiply the mask instead of doing slicing?
-                    pos_loss = F.cross_entropy(pos_logits.permute(0, 2, 1), pos_targets) 
+                    # # Get the loss
+                    # # # We can do position smoothing + attentive reconstruction
+                    # # # But let's just use the basic cross entropy for now
+                    # # # Maybe we should take its mean instead of permute?
+                    # # # Or multiply the mask instead of doing slicing?
+                    # pos_loss = F.cross_entropy(pos_logits.permute(0, 2, 1), pos_targets) 
+
+                    pos_bool = pos_bool.unsqueeze(-1).expand_as(pos_logits)
+                    pos_logits = pos_logits[pos_bool].view(-1, num_patches)
+                    pos_labels = pos_labels.view(-1)
+                    pos_loss = F.cross_entropy(pos_logits, pos_labels)
                     # ----------------------------------------------------           
 
                     return ijepa_loss, pos_loss
