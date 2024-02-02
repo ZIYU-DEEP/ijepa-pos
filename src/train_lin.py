@@ -200,7 +200,7 @@ def main(args, port=40112, resume_preempt=False):
     
     # Set up the wandb
     if rank == 0:
-        wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}'
+        wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}_{lr_lin}_{num_epochs_lin}'
         if use_pos_predictor: wandb_name += f'_{pos_drop_ratio}_{pos_lambda}'
         wandb.init(entity='info-ssl',
                    project=f'pos-jepa-lin-{loader_name}',
@@ -248,11 +248,8 @@ def main(args, port=40112, resume_preempt=False):
     # -----------------------------------------------------------
 
     # ----------------------------------------------------------- #
-    # Setting the data
+    # SETTING THE DATA
     # -- make data transforms
-
-
-    # $$$ TO EDIT HERE
     train_transform = transforms.Compose([transforms.RandomResizedCrop(resize_size),
                                           transforms.RandomHorizontalFlip(p=0.5),
                                           transforms.ToTensor()])
@@ -266,8 +263,6 @@ def main(args, port=40112, resume_preempt=False):
                                              transforms.ToTensor()])
     
 
-    # -- init data-loaders/samplers
-    # $$$ TO EDIT HERE
     _, train_loader, train_sampler = make_imagenet1k(
             transform=train_transform,
             batch_size=batch_size,
@@ -294,28 +289,14 @@ def main(args, port=40112, resume_preempt=False):
             root_path=root_path,
             image_folder=image_folder,
             copy_data=copy_data,
-            drop_last=True)
+            drop_last=False)
     
     ipe = len(train_loader)
+    # -----------------------------------------------------------
 
-    # -- init optimizer and scheduler
-    # $$$ TO EDIT HERE, just follow vissl setting
-    optimizer = torch.optim.SGD(prober.parameters(),
-                                lr=lr_lin,
-                                weight_decay=weight_decay_lin,
-                                momentum=momentum_lin,
-                                nesterov=True)
     
-    scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer,
-        milestones=milestones_lin,
-        gamma=gamma_lin,
-        last_epoch=-1)
-    
-    scaler = torch.cuda.amp.GradScaler() if use_bfloat16 else None
-    
-
-    # SET THE LINEAR PROBING MODEL
+    # ----------------------------------------------------------- #
+    # SETTING THE LINEAR PROBING MODEL
     # -- set the in_dim
     in_dim = encoder.module.embed_dim
     for key in out_feat_keys:
@@ -330,10 +311,31 @@ def main(args, port=40112, resume_preempt=False):
             in_dim = encoder.module.embed_dim
     
     prober = Prober(in_dim, n_categories).to(device)
-    # $$$$ TO Set the optimizer and scheduler here
+    # -----------------------------------------------------------
+
+    # ------------------------------------------------------ #
+    # Set the optimizer, scheduler and scaler
+    optimizer = torch.optim.SGD(prober.parameters(),
+                                lr=lr_lin,
+                                weight_decay=weight_decay_lin,
+                                momentum=momentum_lin,
+                                nesterov=True)
+    
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(
+        optimizer,
+        milestones=milestones_lin,
+        gamma=gamma_lin,
+        last_epoch=-1)
+    
+    scaler = torch.cuda.amp.GradScaler() if use_bfloat16 else None
+    # ------------------------------------------------------ 
+
+    # ----------------------------------------------------------- #
+    # SETTING THE MODEL LOADING FOR PROBER
     prober = DDP(prober)
 
     start_epoch = 0
+
     # -- load training checkpoint
     if load_model:
         prober, optimizer, scaler, start_epoch = load_checkpoint_lin(
@@ -354,18 +356,18 @@ def main(args, port=40112, resume_preempt=False):
             'epoch': epoch,
             'batch_size': batch_size,
             'world_size': world_size,
-            'lr': lr
         }
         if rank == 0:
             torch.save(save_dict, latest_path)
             if (epoch + 1) % checkpoint_freq == 0:
                 torch.save(save_dict, str(save_path).format(epoch=f'{epoch + 1}'))
                 logger.info(f'Model saved at {save_path}.')
+    # ------------------------------------------------------ 
 
 
    # --------------------------------- RUN AN EPOCH --------------------------------- #
     def run_epoch(prober, encoder, rank, data_loader, epoch, 
-                  optimizer=None, scheduler=None, scaler=None):
+                  optimizer=None, scheduler=None, scaler=None, use_bfloat16=True):
 
         # Set the mode
         if optimizer: 
@@ -381,33 +383,36 @@ def main(args, port=40112, resume_preempt=False):
         # Set the bar
         loader_bar = tqdm(data_loader)
         for x, y in loader_bar:
-            # Set the data
-            x = x.to(device, non_blocking=True)
-            y = y.to(device, non_blocking=True)
 
-            # Get the features
-            with torch.no_grad():
-                features = encoder(x)
-                key = out_feat_keys[0].lower()
+            # Set the bfloat
+            with torch.cuda.amp.autocast(dtype=torch.bfloat16, 
+                                         enabled=use_bfloat16):
+                # Set the data
+                x = x.to(device, non_blocking=True)
+                y = y.to(device, non_blocking=True)
 
-                if key.startswith('lastpool') or key.startswith('concatpool'):
-                    features = encoder(x, 
-                        out_feat_keys=out_feat_keys)[0].reshape(- 1, in_dim)
-                else:
-                    features, _ = encoder(x)
-                    if features.dim() == 3: 
-                        features = features.mean(dim=1)
+                # Get the features
+                with torch.no_grad():
+                    features = encoder(x)
+                    key = out_feat_keys[0].lower()
 
-            # Just in case
-            if optimizer: optimizer.zero_grad()
+                    if key.startswith('lastpool') or key.startswith('concatpool'):
+                        features = encoder(x, 
+                            out_feat_keys=out_feat_keys)[0].reshape(- 1, in_dim)
+                    else:
+                        features, _ = encoder(x)
+                        if features.dim() == 3: 
+                            features = features.mean(dim=1)
 
-            # Get the logits
-            logits = prober(features)
+                # Just in case
+                if optimizer: optimizer.zero_grad()
 
-            # Get the loss
-            loss = F.cross_entropy(logits, y)
-            loss = AllReduce.apply(loss)
-            assert not np.isnan(loss), 'loss is nan'
+                # Get the logits
+                logits = prober(features)
+
+                # Get the loss
+                loss = F.cross_entropy(logits, y)
+                loss = AllReduce.apply(loss)
 
             if optimizer:
                 # Zero out the gradients
@@ -439,7 +444,7 @@ def main(args, port=40112, resume_preempt=False):
                     wandb.log({"Test Loss": loss_meter.avg, 
                                "Test Accuracy": acc_meter.avg})
         
-        # We use multi-step scheduler that is epoch wse
+        # We use multi-step scheduler that is epoch wise
         if scheduler: scheduler.step()
         
         # Empty the cache
@@ -460,7 +465,8 @@ def main(args, port=40112, resume_preempt=False):
                                           epoch=epoch,
                                           optimizer=optimizer,
                                           scheduler=scheduler,
-                                          scaler=scaler)
+                                          scaler=scaler,
+                                          use_bfloat16=use_bfloat16)
 
         if rank == 0:
             wandb.log({"Lin Train Loss": train_loss, "Lin Train Acc": train_acc})
@@ -474,7 +480,8 @@ def main(args, port=40112, resume_preempt=False):
                                             epoch=epoch,
                                             optimizer=None,
                                             scheduler=None,
-                                            scaler=None)
+                                            scaler=None,
+                                            use_bfloat16=use_bfloat16)
 
         # ======================= STATS ====================== #
         if train_loss < optimal_loss:

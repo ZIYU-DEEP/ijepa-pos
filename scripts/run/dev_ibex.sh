@@ -23,3 +23,7 @@ python main_pos.py \
 python main_pos.py \
   --fname configs/test_twisted.yaml \
   --devices cuda:0 cuda:1 cuda:2 cuda:3
+
+srun --job-name=ijeapa_base --time=12:00:00 --gres=gpu:a100:4 --cpus-per-gpu=4 --mem=128G python main_pos.py --fname configs/ijepa_baseline.yaml --devices cuda:0 cuda:1 cuda:2 cuda:3
+
+srun --job-name=ijeapa_base --time=12:00:00 --gres=gpu:a100:4 --cpus-per-gpu=4 --mem=128G python main_lin.py --fname configs/ijepa_baseline.yaml --devices cuda:0 cuda:1 cuda:2 cuda:3

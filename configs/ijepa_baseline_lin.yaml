@@ -36,18 +36,18 @@ mask:
 
 meta:
     copy_data: false
-    load_checkpoint: false
+    load_checkpoint: true  # This is for load lin model
     model_name: vit_small
     pred_depth: 6
     pred_emb_dim: 192
     read_checkpoint: null
     use_bfloat16: true
 
-optimization:
+optimization:  # These are for the encoder part; not for training
     ema:
     - 0.996
     - 1.0
-    epochs: 300
+    epochs: 200
     final_lr: 1.0e-06
     final_weight_decay: 0.4
     ipe_scale: 1.0
@@ -72,7 +72,7 @@ pos:
     pos_lambda: 0.2
 
 lin:
-    r_file_encoder: null
+    r_file_encoder: null  # Automatically use the latest one
     resize_size: 224
     lr_lin: 0.01
     weight_decay_lin: 0.0005

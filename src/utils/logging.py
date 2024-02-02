@@ -52,8 +52,9 @@ class CSVLogger(object):
 class AverageMeter(object):
     """computes and stores the average and current value"""
 
-    def __init__(self):
+    def __init__(self, name=None):
         self.reset()
+        self.name = name
 
     def reset(self):
         self.val = 0

@@ -58,7 +58,8 @@ optimization:
 
 probe:
     use_prober: true
-    out_feat_keys: lastpool
+    out_feat_keys: 
+    - lastpool
     n_categories: 100
     probe_interval: 1
 
@@ -69,3 +70,17 @@ pos:
     decoder_depth: 2
     pos_drop_ratio: 0 
     pos_lambda: 0.2
+    
+lin:
+    r_file_encoder: null  # Automatically use the latest one
+    resize_size: 224
+    lr_lin: 0.01
+    weight_decay_lin: 0.0005
+    momentum_lin: 0.9
+    milestones_lin: 
+    - 28
+    - 56
+    - 84
+    gamma_lin: 0.1
+    num_epochs_lin: 100
+    log_interval_lin: 3
