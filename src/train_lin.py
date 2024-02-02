@@ -43,6 +43,7 @@ from src.utils.logging import (
     grad_logger,
     AverageMeter)
 from src.utils.tensors import repeat_interleave_batch
+from src.utils.lars import LARS
 from src.datasets.imagenet1k import make_imagenet1k
 from src.models.vision_transformer import Prober
 
@@ -317,11 +318,15 @@ def main(args, port=40112, resume_preempt=False):
     # Set the optimizer, scheduler and scaler
     # $$$$ TO EDIT HERE
     # THE OPTIMIZER SETTING IS EVEN WORSE THEN ONLINE PROBING
-    optimizer = torch.optim.SGD(prober.parameters(),
-                                lr=lr_lin,
-                                weight_decay=weight_decay_lin,
-                                momentum=momentum_lin,
-                                nesterov=True)
+    # optimizer = torch.optim.SGD(prober.parameters(),
+    #                             lr=lr_lin,
+    #                             weight_decay=weight_decay_lin,
+    #                             momentum=momentum_lin,
+    #                             nesterov=True)
+    optimizer = LARS(prober.parameters(),
+                     lr=lr_lin,
+                     weight_decay=weight_decay_lin,
+                     momentum=momentum_lin)
     
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
