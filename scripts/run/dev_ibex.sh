@@ -19,3 +19,7 @@ python main_pos.py \
 python main_pos.py \
   --fname configs/test_new_new.yaml \
   --devices cuda:0 cuda:1 cuda:2 cuda:3
+
+python main_pos.py \
+  --fname configs/test_twisted.yaml \
+  --devices cuda:0 cuda:1 cuda:2 cuda:3

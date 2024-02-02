@@ -54,6 +54,7 @@ from src.helper import (
     init_opt)
 from src.transforms import make_transforms
 from torchvision import transforms
+from tqdm import tqdm
 
 # --
 log_timings = True
@@ -148,8 +149,15 @@ def main(args, port=40112, resume_preempt=False):
     pos_lambda = args['pos']['pos_lambda']  # Control the weight for using this loss
 
     # -- LIN EVAL $$$$$$$$$
-    load_model_encoder = args['lin']['load_path_encoder']
     r_file_encoder = args['lin']['r_file_encoder']
+    resize_size = args['lin']['resize_size']
+    lr_lin = args['lin']['lr_lin']
+    weight_decay_lin = args['lin']['weight_decay_lin']
+    momentum_lin = args['lin']['momentum_lin']
+    milestones_lin = args['lin']['milestones_lin']
+    gamma_lin = args['lin']['gamma_lin']
+    num_epochs_lin = args['lin']['num_epochs_lin']
+    log_interval_lin = args['lin']['log_interval_lin']
 
 
     dump = os.path.join(folder, 'params-ijepa.yaml')
@@ -180,7 +188,6 @@ def main(args, port=40112, resume_preempt=False):
     os.makedirs(folder, exist_ok=True)
 
     log_path = folder / f'lin.log'
-    log_file = folder / f'lin_r{rank}.csv'
     save_path = folder / 'lin_ep{epoch}.pth.tar'
     latest_path = folder / f'lin_latest.pth.tar'
     latest_path_encoder = folder / f'latest.pth.tar'
@@ -196,7 +203,7 @@ def main(args, port=40112, resume_preempt=False):
         wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}'
         if use_pos_predictor: wandb_name += f'_{pos_drop_ratio}_{pos_lambda}'
         wandb.init(entity='info-ssl',
-                   project=f'pos-jepa-{loader_name}',
+                   project=f'pos-jepa-lin-{loader_name}',
                    name=wandb_name,
                    config=args)
 
@@ -209,20 +216,10 @@ def main(args, port=40112, resume_preempt=False):
 
     # The path to load the encoder model
     load_path_encoder = None 
-    if load_model_encoder:
-        if r_file_encoder:
-            load_path_encoder = folder / r_file_encoder
-        else:
-            load_path_encoder = latest_path_encoder
-
-    # -- make csv_logger
-    csv_logger = CSVLogger(log_file,
-                           ('%d', 'epoch'),
-                           ('%d', 'itr'),
-                           ('%.5f', 'loss'),
-                           ('%.5f', 'mask-A'),
-                           ('%.5f', 'mask-B'),
-                           ('%d', 'time (ms)'))
+    if r_file_encoder:
+        load_path_encoder = folder / r_file_encoder
+    else:
+        load_path_encoder = latest_path_encoder
 
     # ----------------------------------------------------------- #
     # Setting the encoder
@@ -259,6 +256,7 @@ def main(args, port=40112, resume_preempt=False):
     train_transform = transforms.Compose([transforms.RandomResizedCrop(resize_size),
                                           transforms.RandomHorizontalFlip(p=0.5),
                                           transforms.ToTensor()])
+    
     if 'imagenet' in loader_name.lower():
         test_transform = transforms.Compose([transforms.Resize(256),
                                              transforms.CenterCrop(resize_size),
@@ -303,15 +301,15 @@ def main(args, port=40112, resume_preempt=False):
     # -- init optimizer and scheduler
     # $$$ TO EDIT HERE, just follow vissl setting
     optimizer = torch.optim.SGD(prober.parameters(),
-                                lr=0.01,
-                                weight_decay=1e-4,
-                                momentum=0.9,
+                                lr=lr_lin,
+                                weight_decay=weight_decay_lin,
+                                momentum=momentum_lin,
                                 nesterov=True)
     
     scheduler = torch.optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[15, 30, 45],
-        gamma=0.1,
+        milestones=milestones_lin,
+        gamma=gamma_lin,
         last_epoch=-1)
     
     scaler = torch.cuda.amp.GradScaler() if use_bfloat16 else None
@@ -350,11 +348,10 @@ def main(args, port=40112, resume_preempt=False):
 
     def save_checkpoint(epoch):
         save_dict = {
-            'prober': encoder.state_dict(),
+            'prober': prober.state_dict(),
             'opt': optimizer.state_dict(),
             'scaler': None if scaler is None else scaler.state_dict(),
             'epoch': epoch,
-            'loss': loss_meter.avg,
             'batch_size': batch_size,
             'world_size': world_size,
             'lr': lr
@@ -365,242 +362,134 @@ def main(args, port=40112, resume_preempt=False):
                 torch.save(save_dict, str(save_path).format(epoch=f'{epoch + 1}'))
                 logger.info(f'Model saved at {save_path}.')
 
-    # -- TRAINING LOOP
-    for epoch in range(start_epoch, num_epochs):
-        logger.info('Epoch %d' % (epoch + 1))
 
-        # -- update distributed-data-loader epoch
-        train_sampler.set_epoch(epoch)
+   # --------------------------------- RUN AN EPOCH --------------------------------- #
+    def run_epoch(prober, encoder, rank, data_loader, epoch, 
+                  optimizer=None, scheduler=None, scaler=None):
 
-        loss_meter = AverageMeter()
-        time_meter = AverageMeter()
+        # Set the mode
+        if optimizer: 
+            prober.train()
+            train_sampler.set_epoch(epoch)
+        else: 
+            prober.eval()
 
-        # New
-        probe_loss_meter = AverageMeter()
-        probe_acc_meter = AverageMeter()
+        # Set the meters
+        loss_meter = AverageMeter('loss')
+        acc_meter = AverageMeter('acc')
 
-        for itr, (udata, masks_enc, masks_pred) in enumerate(train_loader):
+        # Set the bar
+        loader_bar = tqdm(data_loader)
+        for x, y in loader_bar:
+            # Set the data
+            x = x.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
 
-            # --------------------------------------------------------------- #
-            # Loading image for this iteration
-            def load_imgs():
-                # -- unsupervised imgs
-                imgs = udata[0].to(device, non_blocking=True)
-                imgs_targets = udata[1].to(device, non_blocking=True)
-                masks_1 = [u.to(device, non_blocking=True) for u in masks_enc]
-                masks_2 = [u.to(device, non_blocking=True) for u in masks_pred]
-                return (imgs, imgs_targets, masks_1, masks_2)
+            # Get the features
+            with torch.no_grad():
+                features = encoder(x)
+                key = out_feat_keys[0].lower()
 
-            imgs, imgs_targets, masks_enc, masks_pred = load_imgs()
-            # ---------------------------------------------------------------
+                if key.startswith('lastpool') or key.startswith('concatpool'):
+                    features = encoder(x, 
+                        out_feat_keys=out_feat_keys)[0].reshape(- 1, in_dim)
+                else:
+                    features, _ = encoder(x)
+                    if features.dim() == 3: 
+                        features = features.mean(dim=1)
 
-            # --------------------------------------------------------------- #
-            # Training for this iteration
-            def train_step():
-                _new_lr = scheduler.step()
-                # --
+            # Just in case
+            if optimizer: optimizer.zero_grad()
 
-                # ----------------------------------------------------------- #
-                # Original I-JEPA objective
-                def forward_target():
-                    with torch.no_grad():
-                        # h = target_encoder(imgs)
-                        h, _ = target_encoder(imgs)  # [probe] _ are logits detached for probing
-                        h = F.layer_norm(h, (h.size(-1),))  # normalize over feature-dim
-                        B = len(h)
-                        # -- create targets (masked regions of h)
-                        h = apply_masks(h, masks_pred)
-                        h = repeat_interleave_batch(h, B, repeat=len(masks_enc))
-                        return h
+            # Get the logits
+            logits = prober(features)
 
-                def forward_context():
-                    z, logits = encoder(imgs, masks_enc)  # [probe] logits are detached
-                    z = predictor(z, masks_enc, masks_pred)
-                    return z, logits
+            # Get the loss
+            loss = F.cross_entropy(logits, y)
+            loss = AllReduce.apply(loss)
+            assert not np.isnan(loss), 'loss is nan'
 
-                def loss_fn(z, h):
-                    loss = F.smooth_l1_loss(z, h)
-                    return loss
-                # ----------------------------------------------------------- 
-
-                # ----------------------------------------------------------- #
-                # Enhancement with position prediction
-                def pos_forward_context():
-                    z, logits, pos_logits, pos_bool, pos_targets = encoder(imgs, 
-                                                                   masks_enc, 
-                                                                   pos_drop_ratio,
-                                                                   use_pos_predictor=True)
-                    # Notice that this z has pos_embed partially dropped
-                    z = predictor(z, masks_enc, masks_pred)
-
-                    return z, logits, pos_logits, pos_bool, pos_targets
-
-                def pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets):
-                    # ---------------------------------------------------- #
-                    # The IJEPA Lokss
-                    ijepa_loss = F.smooth_l1_loss(z, h)
-                    # ----------------------------------------------------
-
-                    # ---------------------------------------------------- #
-                    # The Position Prediction Loss
-                    # Get the no. of patches -> essentially no. of classes
-                    num_patches = pos_logits.size(-1)
-                    
-                    # # Only calculate for logits whose positions are dropped
-                    # pos_logits = pos_logits[pos_bool.unsqueeze(-1).expand(
-                    #     -1, -1, num_patches)].reshape(
-                    #         batch_size, -1, num_patches)  
-                    
-                    # # Get the loss
-                    # # # We can do position smoothing + attentive reconstruction
-                    # # # But let's just use the basic cross entropy for now
-                    # # # Maybe we should take its mean instead of permute?
-                    # # # Or multiply the mask instead of doing slicing?
-                    # pos_loss = F.cross_entropy(pos_logits.permute(0, 2, 1), pos_targets) 
-
-                    pos_bool = pos_bool.unsqueeze(-1).expand_as(pos_logits)
-                    pos_logits = pos_logits[pos_bool].view(-1, num_patches)
-                    pos_targets = pos_targets.view(-1)
-                    pos_loss = F.cross_entropy(pos_logits, pos_targets)
-                    # ----------------------------------------------------           
-
-                    return ijepa_loss, pos_loss
-                # ----------------------------------------------------------- 
-
-                # --------------------------------------------------------------- #
-                # Probing for this iteration
-                def probe_loss_acc(logits, imgs_targets):
-                    # [probe] logits are detached
-                    probe_loss = F.cross_entropy(logits, imgs_targets)
-
-                    # [issue] double check this part
-                    probe_acc = (logits.argmax(dim=1) == imgs_targets).float().mean()
-                    return probe_loss, probe_acc
-                # ---------------------------------------------------------------
-
-                # Step 1. Forward
-                with torch.cuda.amp.autocast(dtype=torch.bfloat16, enabled=use_bfloat16):
-                    # Get the target
-                    h = forward_target()
-
-                    # ------------------------------------------
-                    # Original i-jepa objective
-                    if not use_pos_predictor:
-                        # Get the forward pass for predictor
-                        z, logits = forward_context()
-
-                        # Get the ijepa loss
-                        loss = loss_fn(z, h)
-                        
-                        # Just to hold the name
-                        ijepa_loss, pos_loss = loss, 0  
-
-                    # I-jepa + position prediction
-                    else:
-                        # Get the forward pass for both predictor and pos predictor
-                        z, logits, pos_logits, pos_bool, pos_targets = pos_forward_context()
-
-                        # Get the ijepa loss and the pos loss
-                        ijepa_loss, pos_loss = pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets)
-                        loss = ijepa_loss + pos_lambda * pos_loss
-
-                    # Get the detached probe loss
-                    probe_loss, probe_acc = probe_loss_acc(logits, imgs_targets)
-                    
-                    # Sum up the loss
-                    loss_all = loss + probe_loss  # [probe] logits are detached from encoder
-                    loss_all = AllReduce.apply(loss_all)
-
-
-                #  Step 2. Backward & step
+            if optimizer:
+                # Zero out the gradients
+                optimizer.zero_grad()
+                
                 if use_bfloat16:
-                    scaler.scale(loss_all).backward()
+                    scaler.scale(loss).backward()
                     scaler.step(optimizer)
                     scaler.update()
                 else:
-                    loss_all.backward()
+                    loss.backward()
                     optimizer.step()
 
-                grad_stats = grad_logger(encoder.named_parameters())
-                optimizer.zero_grad()
 
-                # Step 3. momentum update of target encoder
-                with torch.no_grad():
-                    m = next(momentum_scheduler)
-                    for param_q, param_k in zip(encoder.parameters(), target_encoder.parameters()):
-                        param_k.data.mul_(m).add_((1.-m) * param_q.detach().data)
+            acc = (logits.argmax(dim=1) == y).float().mean()
+            loss_meter.update(loss.item(), x.size(0))
+            acc_meter.update(acc.item(), x.size(0))
 
-                return (float(loss), float(ijepa_loss), float(pos_loss), float(probe_loss), float(probe_acc),
-                        _new_lr, _new_wd, grad_stats)
-
-            # Apply the train step function
-            (loss, ijepa_loss, pos_loss, probe_loss, probe_acc, _new_lr, _new_wd, grad_stats), etime = gpu_timer(train_step)
-
-            # Update the meters
-            loss_meter.update(loss)
-            time_meter.update(etime)
-            probe_loss_meter.update(probe_loss)
-            probe_acc_meter.update(probe_acc)
-            # ---------------------------------------------------------------
-
-
-            # --------------------------------------------------------------- #
-            # Logging for this iteration
-            def log_stats():
-                csv_logger.log(epoch + 1, itr, loss, maskA_meter.val, maskB_meter.val, etime)
-                if (itr % log_freq == 0) or np.isnan(loss) or np.isinf(loss):
-
-                    # Log to local
-                    logger.info('[%d, %5d] [loss: %.3f] '
-                                '[probe loss: %.3f] '
-                                '[probe acc: %.4f] '
-                                # '[masks: %.1f %.1f] '
-                                '[wd: %.2e] [lr: %.2e] '
-                                # '[mem: %.2e] '
-                                '(%.1f ms)'
-                                % (epoch + 1, itr,
-                                   loss_meter.avg,
-                                   probe_loss_meter.avg,
-                                   probe_acc_meter.avg,
-                                #    maskA_meter.avg,
-                                #    maskB_meter.avg,
-                                   _new_wd,
-                                   _new_lr,
-                                #    torch.cuda.max_memory_allocated() / 1024.**2,
-                                   time_meter.avg))
-                    # Log to wandb
-                    if rank == 0:
-                        wandb.log({'loss': loss_meter.avg,
-                                   'probe loss': probe_loss_meter.avg,
-                                   'probe acc': probe_acc_meter.avg,
-                                  })
-
-                    if grad_stats is not None:
-                        logger.info('[%d, %5d] grad_stats: [%.2e %.2e] (%.2e, %.2e)'
-                                    % (epoch + 1, itr,
-                                       grad_stats.first_layer,
-                                       grad_stats.last_layer,
-                                       grad_stats.min,
-                                       grad_stats.max))
-
-            log_stats()
-
-            assert not np.isnan(loss), 'loss is nan'
-            # ---------------------------------------------------------------
-
-        # -- Save Checkpoint after every epoch
-        logger.info(f'avg. loss {loss_meter.avg:.3f}')
-        logger.info(f'avg. probe loss {probe_loss_meter.avg:.3f}')
-        logger.info(f'avg. probe acc {probe_acc_meter.avg:.4f}')
-        save_checkpoint(epoch + 1)
-
-        # For wandb 
-        if rank == 0:
-            wandb.log({'avg. loss': loss_meter.avg,
-                       'avg. probe loss': probe_loss_meter.avg,
-                       'avg. probe acc': probe_acc_meter.avg,
-                        })
+            if optimizer:
+                loader_bar.set_description("Train epoch {}, loss: {:.4f}, acc: {:.4f}"
+                                        .format(epoch, loss_meter.avg, acc_meter.avg))
+                if rank == 0:
+                    wandb.log({"Train Loss": loss_meter.avg, 
+                               "Train Accuracy": acc_meter.avg})
+            else:
+                loader_bar.set_description("Test epoch {}, loss: {:.4f}, acc: {:.4f}"
+                                        .format(epoch, loss_meter.avg, acc_meter.avg))
+                if rank == 0:
+                    wandb.log({"Test Loss": loss_meter.avg, 
+                               "Test Accuracy": acc_meter.avg})
         
+        # We use multi-step scheduler that is epoch wse
+        if scheduler: scheduler.step()
+        
+        # Empty the cache
+        torch.cuda.empty_cache()
+
+        return loss_meter.avg, acc_meter.avg
+
+    # Training and testing loop
+    optimal_loss, optimal_acc = 1e5, 0.
+    for epoch in range(start_epoch, num_epochs_lin):
+        logger.info('Epoch %d' % (epoch + 1))
+
+        # ================= The training loop ================= #
+        train_loss, train_acc = run_epoch(prober=prober,
+                                          encoder=encoder,
+                                          rank=rank,
+                                          data_loader=train_loader,
+                                          epoch=epoch,
+                                          optimizer=optimizer,
+                                          scheduler=scheduler,
+                                          scaler=scaler)
+
+        if rank == 0:
+            wandb.log({"Lin Train Loss": train_loss, "Lin Train Acc": train_acc})
+
+        # ================= The testing loop ================= #
+        if epoch % log_interval_lin == 0 or epoch == log_interval_lin:
+            test_loss, test_acc = run_epoch(prober=prober,
+                                            encoder=encoder,
+                                            rank=rank,
+                                            data_loader=test_loader,
+                                            epoch=epoch,
+                                            optimizer=None,
+                                            scheduler=None,
+                                            scaler=None)
+
+        # ======================= STATS ====================== #
+        if train_loss < optimal_loss:
+            optimal_loss = train_loss
+            optimal_acc = test_acc
+
+        logger.info("Best Lin Test Acc: {:.4f}".format(optimal_acc))
+
+        if rank == 0:
+            wandb.log({'Lin Test Loss': test_loss,
+                       'Lin Test Acc': test_acc,
+                       'Best Lin Test Acc': optimal_acc})  
+
+        # ======================= SAVE THINGS ====================== #          
+        save_checkpoint(epoch + 1)
     
     # End the wandb
     if rank == 0:

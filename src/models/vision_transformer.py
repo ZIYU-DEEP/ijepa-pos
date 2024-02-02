@@ -747,9 +747,9 @@ class VisionTransformer(nn.Module):
 
         output = []
         for name in names:
-            if name == 'lastpool':
+            if name.lower() == 'lastpool':
                 output.append(self.avg_pool(interms_buffer[-1]))
-            elif name.startswith('concatpool'):
+            elif name.lower().startswith('concatpool'):
                 concat_features = torch.cat([self.avg_pool(layer) for layer in interms_buffer], dim=-1)
                 output.append(concat_features)
 
