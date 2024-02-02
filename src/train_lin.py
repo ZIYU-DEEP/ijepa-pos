@@ -315,6 +315,8 @@ def main(args, port=40112, resume_preempt=False):
 
     # ------------------------------------------------------ #
     # Set the optimizer, scheduler and scaler
+    # $$$$ TO EDIT HERE
+    # THE OPTIMIZER SETTING IS EVEN WORSE THEN ONLINE PROBING
     optimizer = torch.optim.SGD(prober.parameters(),
                                 lr=lr_lin,
                                 weight_decay=weight_decay_lin,
@@ -454,9 +456,8 @@ def main(args, port=40112, resume_preempt=False):
 
     # Training and testing loop
     optimal_loss, optimal_acc = 1e5, 0.
+    test_loss, test_acc = 0., 0.
     for epoch in range(start_epoch, num_epochs_lin):
-        logger.info('Epoch %d' % (epoch + 1))
-
         # ================= The training loop ================= #
         train_loss, train_acc = run_epoch(prober=prober,
                                           encoder=encoder,
@@ -488,7 +489,12 @@ def main(args, port=40112, resume_preempt=False):
             optimal_loss = train_loss
             optimal_acc = test_acc
 
-        logger.info("Best Lin Test Acc: {:.4f}".format(optimal_acc))
+        logger.info(f'| Epoch: {epoch}/{num_epochs_lin} '
+                    f'| Train Loss: {train_loss:.4f} '
+                    f'| Train Acc: {train_acc:.4f} '
+                    f'| Test Loss: {test_loss:.4f} '
+                    f'| Test Acc: {test_acc:.4f} '
+                    f'| Best Lin Test Acc: {optimal_acc:.4f}')
 
         if rank == 0:
             wandb.log({'Lin Test Loss': test_loss,
