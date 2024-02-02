@@ -392,15 +392,12 @@ def main(args, port=40112, resume_preempt=False):
                 return (imgs, imgs_targets, masks_1, masks_2)
 
             imgs, imgs_targets, masks_enc, masks_pred = load_imgs()
-            maskA_meter.update(len(masks_enc[0][0]))
-            maskB_meter.update(len(masks_pred[0][0]))
             # ---------------------------------------------------------------
 
             # --------------------------------------------------------------- #
             # Training for this iteration
             def train_step():
                 _new_lr = scheduler.step()
-                _new_wd = wd_scheduler.step()
                 # --
 
                 # ----------------------------------------------------------- #

@@ -185,7 +185,8 @@ def main(args, port=40112, resume_preempt=False):
     # Set up the wandb
     if rank == 0:
         wandb_name = f'{method}_{batch_size}_{lr}_{num_epochs}'
-        if use_pos_predictor: wandb_name += f'_{pos_drop_ratio}_{pos_lambda}'
+        if use_pos_predictor: 
+            wandb_name += f'_{pos_drop_ratio}_{pos_lambda}_{decoder_num_heads}'
         wandb.init(entity='info-ssl',
                    project=f'pos-jepa-{loader_name}',
                    name=wandb_name,
