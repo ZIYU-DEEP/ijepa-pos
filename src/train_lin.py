@@ -47,6 +47,10 @@ from src.utils.lars import LARS
 from src.datasets.imagenet1k import make_imagenet1k
 from src.models.vision_transformer import Prober
 
+from src.utils.schedulers import (
+    WarmupCosineSchedule,
+    CosineWDSchedule)
+
 from src.helper import (
     load_checkpoint,
     load_checkpoint_lin,

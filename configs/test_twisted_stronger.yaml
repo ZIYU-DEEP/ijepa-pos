@@ -36,14 +36,14 @@ mask:
 
 meta:
     copy_data: false
-    load_checkpoint: false  # This is for load lin model
+    load_checkpoint: false
     model_name: vit_small
     pred_depth: 6
     pred_emb_dim: 192
     read_checkpoint: null
     use_bfloat16: true
 
-optimization:  # These are for the encoder part; not for training
+optimization:
     ema:
     - 0.996
     - 1.0
@@ -52,7 +52,7 @@ optimization:  # These are for the encoder part; not for training
     final_weight_decay: 0.4
     ipe_scale: 1.0
     lr: 0.001
-    start_lr: 0.0002
+    start_lr: 0.0005
     warmup: 40
     weight_decay: 0.04
 
@@ -64,23 +64,9 @@ probe:
     probe_interval: 1
 
 pos:
-    use_pos_predictor: false
+    use_pos_predictor: true
     decoder_embed_dim: 256
-    decoder_num_heads: 8
+    decoder_num_heads: 16
     decoder_depth: 2
-    pos_drop_ratio: 0 
-    pos_lambda: 0.2
-
-lin:
-    r_file_encoder: null  # Automatically use the latest one
-    resize_size: 224
-    lr_lin: 0.01
-    weight_decay_lin: 0.0005
-    momentum_lin: 0.9
-    milestones_lin: 
-    - 10
-    - 25
-    - 40
-    gamma_lin: 0.1
-    num_epochs_lin: 100
-    log_interval_lin: 3
+    pos_drop_ratio: 0.1
+    pos_lambda: 0.005

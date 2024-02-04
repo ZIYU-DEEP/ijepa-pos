@@ -7,13 +7,14 @@ python main_pos.py \
 ```
 
 ## TODO
-- write a scheduler for the pos loss. it drops quickly. we might want to find a good balance.
+<!-- - write a scheduler for the pos loss. it drops quickly. we might want to find a good balance.
   - we may need to set a high pos lambda at the beginning, and gradually decay?
 - write the formula on overleaf.
-- double check the probe acc, and the pos loss part.
+- double check the probe acc, and the pos loss part. -->
 <!-- - update the logging part (auto-configure the write tag, and the w&b). -->
 <!-- - update the linear probing part. -->
 <!-- - update the auto port finding. -->
+Just a note: instead of predicting the positions for only the dropped ones, let the model to predict them all can help smooth the learning.
 
 ## Current Design
 For the context, we partially drop some of its positional embeddings (replaced by learnable mask tokens), then feed it into the encoder. 
