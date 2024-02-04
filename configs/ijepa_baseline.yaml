@@ -70,11 +70,11 @@ pos:
     decoder_depth: 2
     pos_drop_ratio: 0 
     pos_lambda: 0.2
-    
+
 lin:
     r_file_encoder: null  # Automatically use the latest one
     resize_size: 224
-    lr_lin: 0.01
+    lr_lin: 0.001
     weight_decay_lin: 0.0005
     momentum_lin: 0.9
     milestones_lin: 

@@ -36,7 +36,7 @@ mask:
 
 meta:
     copy_data: false
-    load_checkpoint: true  # This is for load lin model
+    load_checkpoint: false  # This is for load lin model
     model_name: vit_small
     pred_depth: 6
     pred_emb_dim: 192
@@ -74,7 +74,7 @@ pos:
 lin:
     r_file_encoder: null  # Automatically use the latest one
     resize_size: 224
-    lr_lin: 0.01
+    lr_lin: 0.001
     weight_decay_lin: 0.0005
     momentum_lin: 0.9
     milestones_lin: 
@@ -84,9 +84,3 @@ lin:
     gamma_lin: 0.1
     num_epochs_lin: 100
     log_interval_lin: 3
-
-
-
-
-
-
