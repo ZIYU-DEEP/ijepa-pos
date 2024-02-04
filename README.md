@@ -6,7 +6,7 @@ python main_pos.py \
   --devices cuda:0 cuda:1 cuda:2 cuda:3 cuda:4 cuda:5 cuda:6 cuda:7 cuda:8
 ```
 
-## TODO
+<!-- ## TODO -->
 <!-- - write a scheduler for the pos loss. it drops quickly. we might want to find a good balance.
   - we may need to set a high pos lambda at the beginning, and gradually decay?
 - write the formula on overleaf.
@@ -14,7 +14,7 @@ python main_pos.py \
 <!-- - update the logging part (auto-configure the write tag, and the w&b). -->
 <!-- - update the linear probing part. -->
 <!-- - update the auto port finding. -->
-Just a note: instead of predicting the positions for only the dropped ones, let the model to predict them all can help smooth the learning.
+<!-- Just a note: instead of predicting the positions for only the dropped ones, let the model to predict them all can help smooth the learning. -->
 
 ## Current Design
 For the context, we partially drop some of its positional embeddings (replaced by learnable mask tokens), then feed it into the encoder. 
