@@ -342,6 +342,11 @@ def main(args, port=40112, resume_preempt=False):
         ijepa_loss_meter = AverageMeter()
         pos_loss_meter = AverageMeter()
 
+        # SIMPLE SCHEDULE
+        if not (epoch + 1) % 15:
+            print('I am here blessing you at epoch {epoch}.')
+            pos_lambda *= 0.1
+
         for itr, (udata, masks_enc, masks_pred) in enumerate(unsupervised_loader):
 
             # --------------------------------------------------------------- #
@@ -364,7 +369,6 @@ def main(args, port=40112, resume_preempt=False):
             def train_step():
                 _new_lr = scheduler.step()
                 _new_wd = wd_scheduler.step()
-                # --
 
                 # ----------------------------------------------------------- #
                 # Original I-JEPA objective
@@ -468,6 +472,7 @@ def main(args, port=40112, resume_preempt=False):
 
                         # Get the ijepa loss and the pos loss
                         ijepa_loss, pos_loss = pos_loss_fn(z, h, pos_logits, pos_bool, pos_targets)
+
                         loss = ijepa_loss + pos_lambda * pos_loss
 
                     # Get the detached probe loss
