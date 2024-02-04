@@ -342,7 +342,7 @@ def main(args, port=40112, resume_preempt=False):
         ijepa_loss_meter = AverageMeter()
         pos_loss_meter = AverageMeter()
 
-        # SIMPLE SCHEDULE
+        # #### TO EDIT HERE !!!! SIMPLE SCHEDULE FOR NOW
         if not (epoch + 1) % 15:
             print('I am here blessing you at epoch {epoch}.')
             pos_lambda *= 0.1

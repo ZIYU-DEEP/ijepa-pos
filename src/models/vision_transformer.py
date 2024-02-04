@@ -641,7 +641,7 @@ class VisionTransformer(nn.Module):
         # ---------------------------------------------------------- #
         # Get the position prediction results
         if use_pos_predictor:
-            assert pos_drop_ratio, 'Only tested when pos are dropped.'
+            assert pos_drop_ratio, 'You must set a non-zero drop ratio if dropping.'
             pos_logits = self.forward_decoder(x)
 
             # ---------------------------------------------------------- #
