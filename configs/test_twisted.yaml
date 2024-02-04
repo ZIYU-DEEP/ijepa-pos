@@ -68,4 +68,4 @@ pos:
     decoder_num_heads: 16
     decoder_depth: 2
     pos_drop_ratio: 0.1
-    pos_lambda: 0.005
+    pos_lambda: 0.05
